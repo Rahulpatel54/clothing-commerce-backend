@@ -1,8 +1,8 @@
 # Clothing Commerce & Business Management Backend
 
 Modular monolith on Node.js + Express + PostgreSQL + Sequelize.
-This repository is being built in phases; **this slice covers phases 1–4** of the 25-phase plan:
-project setup, configuration, the database/Sequelize foundation, and authentication.
+This repository is being built in phases; **this slice covers phases 1–6** of the 25-phase plan:
+project setup, configuration, the database/Sequelize foundation, authentication, RBAC, users/customers and the product catalogue with search and discovery.
 
 ## What exists now
 
@@ -24,7 +24,13 @@ project setup, configuration, the database/Sequelize foundation, and authenticat
 | Auth: register, login, logout, refresh rotation, password reset | Done |
 | Migrations: `refresh_tokens`, `password_reset_tokens` | Done |
 | `authenticate` middleware (`req.user`), account lockout, MFA seam | Done |
-| RBAC `authorize()`, products, cart, orders, everything else | **Next phases** |
+| RBAC `authorize()` / `authorizeSelfOr()` with per-request permission cache | Done |
+| Audit-log writer used by every privileged mutation | Done |
+| Users module (admin CRUD, role assignment, status changes) | Done |
+| Customers module: profiles, addresses, marketing opt-outs, derived spend stats | Done |
+| Catalog: categories, collections, products, variants, images | Done |
+| Discovery: trigram + full-text search, filters, facets, new arrivals, best sellers, trending, related, recently viewed | Done |
+| Inventory, cart, checkout, orders, payments, everything else | **Next phases** |
 
 ## Setup
 
@@ -64,6 +70,17 @@ routes → controller → validation → service → repository → model → po
 - `npm install` was not run in the authoring environment (no network), so the lockfile is absent — install locally to generate it.
 - Redis/BullMQ is off by default (`REDIS_ENABLED=false`); `src/jobs/` and `src/integrations/` are reserved and empty.
 - `users.mfa_secret_encrypted` is a placeholder for the KEK/DEK encryption service introduced in a later phase.
+
+## Phase 5-6 notes
+
+- `authorize('products:create')` resolves user -> roles -> permissions from the database on each request (cached on `req`), so a revoked role takes effect immediately rather than when the token expires. Admins hold an implicit `*`.
+- `authorizeSelfOr('users:read')` is the IDOR guard: owners pass on their own id, everyone else needs the permission.
+- `audit.service.record(req, {...})` accepts the caller's transaction, so the audit row commits with the change it describes, and it scrubs password hashes and token hashes.
+- Customer spend, order count and last purchase are denormalised columns written only by the orders phase; AOV is always computed. Any client attempt to set them is stripped in the service.
+- Partial unique indexes enforce one default shipping address and one default billing address per customer at the database level, not only in code.
+- Variant `price` is nullable and means "inherit the parent product price"; the resolved value is returned as `effectivePrice`. `costPrice` never appears on public responses.
+- Search uses a GIN trigram index on `products.name` plus a full-text index over name/description/tags. Sorting is whitelisted, so nothing user-supplied reaches the ORDER BY clause.
+- `product_views` powers trending (views in a window) and recently-viewed (per customer, or per `X-Session-Id` for guests); trending falls back to best sellers while the table is cold. `products.sales_count` is populated by the orders phase.
 
 ## Auth notes
 
