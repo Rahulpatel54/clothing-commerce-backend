@@ -52,7 +52,10 @@ const spec = swaggerJsdoc({
         ValidationError: { description: 'Request validation failed', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
       },
     },
-    tags: [{ name: 'Health', description: 'Liveness and readiness probes' }],
+    tags: [
+      { name: 'Health', description: 'Liveness and readiness probes' },
+      { name: 'Auth', description: 'Registration, login, token rotation and password reset' },
+    ],
   },
   apis: [path.join(__dirname, '..', 'modules', '**', '*.routes.js')],
 });

@@ -27,6 +27,9 @@ const schema = Joi.object({
   JWT_ACCESS_EXPIRES_IN: Joi.string().default('15m'),
   JWT_REFRESH_EXPIRES_IN: Joi.string().default('30d'),
   BCRYPT_ROUNDS: Joi.number().default(12),
+  AUTH_MAX_FAILED_ATTEMPTS: Joi.number().default(5),
+  AUTH_LOCK_MINUTES: Joi.number().default(15),
+  PASSWORD_RESET_EXPIRES_MINUTES: Joi.number().default(30),
 
   REDIS_ENABLED: Joi.boolean().default(false),
   REDIS_URL: Joi.string().default('redis://localhost:6379'),
@@ -67,6 +70,9 @@ module.exports = {
     accessExpiresIn: env.JWT_ACCESS_EXPIRES_IN,
     refreshExpiresIn: env.JWT_REFRESH_EXPIRES_IN,
     bcryptRounds: env.BCRYPT_ROUNDS,
+    maxFailedAttempts: env.AUTH_MAX_FAILED_ATTEMPTS,
+    lockMinutes: env.AUTH_LOCK_MINUTES,
+    passwordResetExpiresMinutes: env.PASSWORD_RESET_EXPIRES_MINUTES,
   },
   redis: { enabled: env.REDIS_ENABLED, url: env.REDIS_URL },
   security: {

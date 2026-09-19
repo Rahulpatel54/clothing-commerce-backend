@@ -1,8 +1,8 @@
 # Clothing Commerce & Business Management Backend
 
 Modular monolith on Node.js + Express + PostgreSQL + Sequelize.
-This repository is being built in phases; **this slice covers phases 1–3** of the 25-phase plan:
-project setup, configuration, and the database/Sequelize foundation.
+This repository is being built in phases; **this slice covers phases 1–4** of the 25-phase plan:
+project setup, configuration, the database/Sequelize foundation, and authentication.
 
 ## What exists now
 
@@ -21,7 +21,10 @@ project setup, configuration, and the database/Sequelize foundation.
 | Swagger/OpenAPI generated from route JSDoc + Swagger UI at `/docs` | Done |
 | Health module (`/health/live`, `/health/ready`) as the reference vertical slice | Done |
 | Jest + Supertest harness with negative cases | Done |
-| Auth, products, cart, orders, everything else | **Next phases** |
+| Auth: register, login, logout, refresh rotation, password reset | Done |
+| Migrations: `refresh_tokens`, `password_reset_tokens` | Done |
+| `authenticate` middleware (`req.user`), account lockout, MFA seam | Done |
+| RBAC `authorize()`, products, cart, orders, everything else | **Next phases** |
 
 ## Setup
 
@@ -61,3 +64,11 @@ routes → controller → validation → service → repository → model → po
 - `npm install` was not run in the authoring environment (no network), so the lockfile is absent — install locally to generate it.
 - Redis/BullMQ is off by default (`REDIS_ENABLED=false`); `src/jobs/` and `src/integrations/` are reserved and empty.
 - `users.mfa_secret_encrypted` is a placeholder for the KEK/DEK encryption service introduced in a later phase.
+
+## Auth notes
+
+- Refresh tokens are opaque random strings; only their SHA-256 hash is stored, so a database dump cannot be replayed.
+- Rotation on every refresh. Presenting an already-revoked token is treated as theft: every session for that user is revoked.
+- Lockout after `AUTH_MAX_FAILED_ATTEMPTS` failures for `AUTH_LOCK_MINUTES`; login returns one generic 401 whether the email exists or not.
+- Password reset tokens are single-use, hashed, and a successful reset revokes every refresh token. Outside production the token is returned in the response body until the notifications module can deliver it.
+- `src/modules/auth/mfa/mfa.provider.js` is an interface with a no-op implementation; TOTP drops in behind it without touching the auth service.

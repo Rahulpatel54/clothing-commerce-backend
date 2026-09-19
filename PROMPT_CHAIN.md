@@ -11,13 +11,13 @@ Attach the original spec document each time; attach the repo (or a zip/diff of i
 > Stack: Node.js, Express, PostgreSQL, Sequelize, Joi, Swagger (swagger-jsdoc), Jest + Supertest, pino.
 > Architecture: modular monolith, domain-based — `src/modules/<domain>/{*.controller,*.service,*.repository,*.routes,*.validation,*.model}.js`.
 > Flow: routes → controller → validation → service → repository → Sequelize model → Postgres.
-> Already built (phases 1–3): env-validated config, pino logging with redaction, request IDs, central error handler + `ApiError`, single response envelope in `utils/apiResponse`, Joi `validate` middleware, helmet/CORS/compression/rate limiting, Sequelize instance + model auto-registry, migrations for roles/permissions/users/user_roles/role_permissions/audit_logs/settings, seeder for roles + permission matrix + admin user + settings, Swagger UI at `/docs`, health module as the reference slice, Jest harness.
+> Already built (phases 1–4): env-validated config, pino logging with redaction, request IDs, central error handler + `ApiError`, single response envelope in `utils/apiResponse`, Joi `validate` middleware, helmet/CORS/compression/rate limiting, Sequelize instance + model auto-registry, migrations for roles/permissions/users/user_roles/role_permissions/audit_logs/settings, seeder for roles + permission matrix + admin user + settings, Swagger UI at `/docs`, health module as the reference slice, Jest harness. Auth: `refresh_tokens` and `password_reset_tokens` tables, register/login/logout/refresh-rotation/password-reset, `token.service.js` (JWT access + hashed opaque refresh), `middleware/authenticate.js` populating `req.user` with roles and permissions, account lockout, and an MFA provider seam.
 > Rules: reuse the existing utilities — do not invent a second error class, response shape, or validation pattern. Migrations only, no `sync()`. Transactions for any multi-write operation. Never trust client-supplied price, stock, permissions, discounts, rewards or order state. Every route needs a Joi schema and an `@openapi` JSDoc block. Every module needs Jest tests including negative cases. Register new routes in `src/modules/index.js`.
 > Deliver only the phase I name. End with: files added/changed, migration commands to run, and what the next phase inherits.
 
 ---
 
-## Phase 4 — Auth
+## Phase 4 — Auth (DONE)
 > Build the `auth` module: register, login, logout, refresh-token rotation, password reset (request + confirm), and the `refresh_tokens` table (hashed token, device/user-agent, IP, expiry, revoked_at, replaced_by). Add bcrypt hashing, JWT access/refresh issuance, `authenticate` middleware populating `req.user`, account lockout after N failed attempts using `failed_login_attempts`/`locked_until`, and the stricter `authLimiter` on login and reset routes. Add an MFA architecture seam (interface + no-op implementation) without implementing TOTP yet. Tests: happy paths plus wrong password, locked account, reused/revoked refresh token, expired token, and reset-token replay.
 
 ## Phase 5 — RBAC + Users + Customers
