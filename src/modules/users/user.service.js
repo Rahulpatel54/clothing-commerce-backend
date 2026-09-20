@@ -35,12 +35,8 @@ const create = async (req, payload) => {
   const user = await repo.transaction(async (t) => {
     const created = await repo.create(
       {
-        email: payload.email,
-        phone: payload.phone,
-        passwordHash,
-        firstName: payload.firstName,
-        lastName: payload.lastName,
-        status: payload.status || 'ACTIVE',
+        email: payload.email, phone: payload.phone, passwordHash,
+        firstName: payload.firstName, lastName: payload.lastName, status: payload.status || 'ACTIVE',
       },
       t
     );
@@ -61,7 +57,6 @@ const update = async (req, id, payload) => {
   if (!user) throw ApiError.notFound('User not found');
 
   const before = present(user);
-  // Only whitelisted fields ever reach the model; status and roles have their own endpoints.
   const fields = ['firstName', 'lastName', 'phone'].reduce((acc, key) => {
     if (payload[key] !== undefined) acc[key] = payload[key];
     return acc;
@@ -80,13 +75,7 @@ const changeStatus = async (req, id, { status, reason }) => {
 
   const before = present(user);
   await repo.update(user, { status, ...(status === 'ACTIVE' ? { lockedUntil: null, failedLoginAttempts: 0 } : {}) });
-  await audit.record(req, {
-    action: 'user.status_change',
-    entityType: 'User',
-    entityId: id,
-    before,
-    after: { status, reason },
-  });
+  await audit.record(req, { action: 'user.status_change', entityType: 'User', entityId: id, before, after: { status, reason } });
   return get(id);
 };
 
@@ -109,7 +98,7 @@ const remove = async (req, id) => {
   if (!user) throw ApiError.notFound('User not found');
   if (user.id === req.user.id) throw ApiError.badRequest('You cannot delete your own account');
 
-  await repo.destroy(user); // soft delete (paranoid)
+  await repo.destroy(user);
   await audit.record(req, { action: 'user.delete', entityType: 'User', entityId: id, before: present(user) });
   return { deleted: true };
 };

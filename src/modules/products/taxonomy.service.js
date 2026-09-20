@@ -6,25 +6,15 @@ const ApiError = require('../../utils/ApiError');
 const { uniqueSlug } = require('../../utils/slugify');
 const audit = require('../audit/audit.service');
 
-// Categories and collections share the same shape of CRUD, so one factory serves both.
 function taxonomy(modelName, label) {
   const Model = () => db[modelName];
 
   const slugExists = async (slug, ignoreId) =>
-    Boolean(
-      await Model().findOne({
-        where: { slug, ...(ignoreId ? { id: { [Op.ne]: ignoreId } } : {}) },
-        paranoid: false,
-        attributes: ['id'],
-      })
-    );
+    Boolean(await Model().findOne({ where: { slug, ...(ignoreId ? { id: { [Op.ne]: ignoreId } } : {}) }, paranoid: false, attributes: ['id'] }));
 
   return {
     list: ({ includeInactive = false } = {}) =>
-      Model().findAll({
-        where: includeInactive ? {} : { isActive: true },
-        order: [...(modelName === 'Category' ? [['position', 'ASC']] : []), ['name', 'ASC']],
-      }),
+      Model().findAll({ where: includeInactive ? {} : { isActive: true }, order: [...(modelName === 'Category' ? [['position', 'ASC']] : []), ['name', 'ASC']] }),
 
     async getBySlug(slug) {
       const row = await Model().findOne({ where: { slug } });
@@ -74,7 +64,4 @@ function taxonomy(modelName, label) {
   };
 }
 
-module.exports = {
-  categories: taxonomy('Category', 'Category'),
-  collections: taxonomy('Collection', 'Collection'),
-};
+module.exports = { categories: taxonomy('Category', 'Category'), collections: taxonomy('Collection', 'Collection') };

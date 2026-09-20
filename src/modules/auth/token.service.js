@@ -24,8 +24,6 @@ function verifyAccessToken(token) {
   }
 }
 
-// Refresh tokens are opaque random strings; the database stores only their hash,
-// so a database leak cannot be replayed against the API.
 function generateRefreshToken() {
   const raw = crypto.randomBytes(48).toString('hex');
   return { raw, hash: hashToken(raw) };

@@ -22,14 +22,7 @@ const list = async ({ filters = {}, page, limit, offset, sort = 'createdAt', ord
   const { where, role } = buildWhere(filters);
   const include = [{ ...roleInclude, ...(role ? { where: { name: role }, required: true } : {}) }];
 
-  const { rows, count } = await db.User.findAndCountAll({
-    where,
-    include,
-    order: [[sort, order]],
-    limit,
-    offset,
-    distinct: true,
-  });
+  const { rows, count } = await db.User.findAndCountAll({ where, include, order: [[sort, order]], limit, offset, distinct: true });
   return { rows, count, page, limit };
 };
 
@@ -38,12 +31,8 @@ const findByEmail = (email) => db.User.findOne({ where: { email: String(email).t
 const create = (payload, transaction) => db.User.create(payload, { transaction });
 const update = (user, fields, transaction) => user.update(fields, { transaction });
 const destroy = (user, transaction) => user.destroy({ transaction });
-
-const findRolesByNames = (names, transaction) =>
-  db.Role.findAll({ where: { name: { [Op.in]: names } }, transaction });
-
+const findRolesByNames = (names, transaction) => db.Role.findAll({ where: { name: { [Op.in]: names } }, transaction });
 const setRoles = (user, roles, transaction) => user.setRoles(roles, { transaction });
-
 const transaction = (fn) => db.sequelize.transaction(fn);
 
 module.exports = { list, findById, findByEmail, create, update, destroy, findRolesByNames, setRoles, transaction };

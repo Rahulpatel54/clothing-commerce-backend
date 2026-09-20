@@ -56,6 +56,28 @@ async function issueSession(user, context = {}, transaction) {
   };
 }
 
+// Registration creates the customer profile + records a pending referral, if either
+// module is present. Both are optional seams: neither failure should break signup.
+async function afterRegisterHooks(user, payload, transaction) {
+  try {
+    // eslint-disable-next-line global-require
+    const customerService = require('../customers/customer.service');
+    await customerService.createForUser(user.id, {}, transaction);
+  } catch (err) {
+    logger.warn({ err, userId: user.id }, 'Could not create customer profile on register');
+  }
+
+  if (payload.referralCode) {
+    try {
+      // eslint-disable-next-line global-require
+      const referralService = require('../referrals/referral.service');
+      await referralService.recordSignup({ referralCode: payload.referralCode, newUserId: user.id }, transaction);
+    } catch (err) {
+      logger.warn({ err, userId: user.id }, 'Could not record referral signup');
+    }
+  }
+}
+
 async function register(payload, context = {}) {
   const existing = await repo.findUserByEmail(payload.email);
   if (existing) throw ApiError.conflict('An account with this email already exists');
@@ -77,6 +99,7 @@ async function register(payload, context = {}) {
 
     const customerRole = await repo.findRoleByName('customer', t);
     if (customerRole) await repo.assignRole(created, customerRole, t);
+    await afterRegisterHooks(created, payload, t);
     return created;
   });
 
@@ -101,7 +124,6 @@ async function registerFailedAttempt(user) {
 
 async function login({ email, password }, context = {}) {
   const user = await repo.findUserByEmail(email, { withSecrets: true });
-  // Same error and shape whether the account exists or not.
   if (!user) throw ApiError.unauthorized(INVALID_CREDENTIALS);
 
   if (lockState(user)) {
@@ -124,7 +146,23 @@ async function login({ email, password }, context = {}) {
     return { mfaRequired: true, challengeId: challenge.challengeId, method: challenge.method };
   }
 
-  return issueSession(user, context);
+  const session = await issueSession(user, context);
+
+  // Fold a guest cart (tracked by X-Session-Id) into the customer's cart on login.
+  if (context.sessionId) {
+    try {
+      // eslint-disable-next-line global-require
+      const cartService = require('../cart/cart.service');
+      // eslint-disable-next-line global-require
+      const customerRepo = require('../customers/customer.repository');
+      const customer = await customerRepo.findByUserId(user.id);
+      if (customer) await cartService.mergeGuestCart({ sessionId: context.sessionId, customerId: customer.id });
+    } catch (err) {
+      logger.warn({ err, userId: user.id }, 'Could not merge guest cart on login');
+    }
+  }
+
+  return session;
 }
 
 async function refresh({ refreshToken }, context = {}) {
@@ -132,8 +170,6 @@ async function refresh({ refreshToken }, context = {}) {
   const record = await repo.findRefreshTokenByHash(hash);
   if (!record) throw ApiError.unauthorized('Invalid refresh token');
 
-  // A revoked token being presented again means the token was replayed or stolen:
-  // kill the whole family for that user rather than just this one.
   if (record.revokedAt) {
     await repo.revokeAllRefreshTokensForUser(record.userId, { reason: 'REUSE_DETECTED' });
     logger.warn({ userId: record.userId }, 'Refresh token reuse detected; all sessions revoked');
@@ -148,25 +184,19 @@ async function refresh({ refreshToken }, context = {}) {
 
   return repo.transaction(async (t) => {
     const session = await issueSession(user, context, t);
-    await repo.revokeRefreshToken(record, {
-      reason: 'ROTATED',
-      replacedByTokenId: session.refreshTokenId,
-      transaction: t,
-    });
+    await repo.revokeRefreshToken(record, { reason: 'ROTATED', replacedByTokenId: session.refreshTokenId, transaction: t });
     return session;
   });
 }
 
 async function logout({ refreshToken }) {
   const record = await repo.findRefreshTokenByHash(tokens.hashToken(refreshToken));
-  // Idempotent: logging out twice is not an error.
   if (record && !record.revokedAt) await repo.revokeRefreshToken(record, { reason: 'LOGOUT' });
   return { loggedOut: true };
 }
 
 async function requestPasswordReset({ email }, context = {}) {
   const user = await repo.findUserByEmail(email);
-  // Always the same answer, so the endpoint cannot be used to enumerate accounts.
   if (!user) return { requested: true };
 
   const { raw, hash } = tokens.generateRefreshToken();
@@ -183,7 +213,6 @@ async function requestPasswordReset({ email }, context = {}) {
     );
   });
 
-  // Delivery moves to the notifications module in a later phase; never returned in production.
   logger.info({ userId: user.id }, 'Password reset token issued');
   return { requested: true, ...(config.isProduction ? {} : { resetToken: raw }) };
 }
@@ -202,7 +231,6 @@ async function confirmPasswordReset({ token, password }) {
   await repo.transaction(async (t) => {
     await repo.updateUser(user, { passwordHash, failedLoginAttempts: 0, lockedUntil: null }, t);
     await repo.markPasswordResetUsed(record, t);
-    // A password change invalidates every existing session.
     await repo.revokeAllRefreshTokensForUser(user.id, { reason: 'PASSWORD_RESET', transaction: t });
   });
 
@@ -216,13 +244,4 @@ async function me(userId) {
   return { ...publicUser(user), roles, permissions };
 }
 
-module.exports = {
-  register,
-  login,
-  refresh,
-  logout,
-  requestPasswordReset,
-  confirmPasswordReset,
-  me,
-  publicUser,
-};
+module.exports = { register, login, refresh, logout, requestPasswordReset, confirmPasswordReset, me, publicUser };

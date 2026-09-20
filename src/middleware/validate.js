@@ -5,11 +5,6 @@ const ApiError = require('../utils/ApiError');
 
 const SEGMENTS = ['params', 'query', 'body'];
 
-/**
- * validate({ body, query, params }) -> express middleware.
- * Replaces the request segment with the validated (coerced, stripped) value,
- * so services never see unknown or unchecked fields.
- */
 module.exports = (schemaMap) => (req, res, next) => {
   const details = [];
 

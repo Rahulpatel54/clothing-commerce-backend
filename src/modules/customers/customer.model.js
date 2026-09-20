@@ -15,7 +15,6 @@ module.exports = (sequelize, DataTypes) => {
       marketingSms: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
       marketingWhatsapp: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
       marketingOptOutAt: { type: DataTypes.DATE },
-      // Derived stats. Written only by the orders/payments phases; never accepted from a client.
       totalSpend: { type: DataTypes.DECIMAL(14, 2), allowNull: false, defaultValue: 0 },
       orderCount: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
       lastPurchaseAt: { type: DataTypes.DATE },
@@ -23,7 +22,6 @@ module.exports = (sequelize, DataTypes) => {
     { tableName: 'customers', paranoid: true }
   );
 
-  // Average order value is always computed, never stored, so it cannot drift.
   Customer.prototype.averageOrderValue = function averageOrderValue() {
     const count = Number(this.orderCount) || 0;
     return count === 0 ? 0 : Number((Number(this.totalSpend) / count).toFixed(2));
@@ -32,6 +30,8 @@ module.exports = (sequelize, DataTypes) => {
   Customer.associate = (db) => {
     Customer.belongsTo(db.User, { foreignKey: 'user_id', as: 'user' });
     Customer.hasMany(db.Address, { foreignKey: 'customer_id', as: 'addresses' });
+    Customer.hasOne(db.Wallet, { foreignKey: 'customer_id', as: 'wallet' });
+    Customer.hasMany(db.WishlistItem, { foreignKey: 'customer_id', as: 'wishlistItems' });
   };
 
   return Customer;

@@ -4,7 +4,6 @@ const ApiError = require('../../utils/ApiError');
 const audit = require('../audit/audit.service');
 const repo = require('./customer.repository');
 
-// Fields a client may never write: they are derived from orders and payments.
 const DERIVED = ['totalSpend', 'orderCount', 'lastPurchaseAt'];
 
 function present(customer) {
@@ -47,6 +46,8 @@ const getMine = async (req) => {
 const createForUser = async (userId, payload = {}, transaction) => {
   const clean = { ...payload };
   DERIVED.forEach((f) => delete clean[f]);
+  const existing = await repo.findByUserId(userId);
+  if (existing) return existing;
   return repo.create({ ...clean, userId }, transaction);
 };
 
@@ -69,13 +70,7 @@ const setMarketingPreferences = async (req, id, prefs) => {
 
   const before = present(customer);
   await repo.update(customer, fields);
-  await audit.record(req, {
-    action: 'customer.marketing_preferences',
-    entityType: 'Customer',
-    entityId: id,
-    before,
-    after: fields,
-  });
+  await audit.record(req, { action: 'customer.marketing_preferences', entityType: 'Customer', entityId: id, before, after: fields });
   return present(await repo.findById(id));
 };
 
@@ -89,15 +84,9 @@ const addAddress = async (req, customerId, payload) => {
 
   return repo.transaction(async (t) => {
     const existing = await repo.countAddresses(customerId, t);
-    // The first address is always the default for both purposes.
     const isFirst = existing === 0;
     const address = await repo.createAddress(
-      {
-        ...payload,
-        customerId,
-        isDefaultShipping: isFirst || Boolean(payload.isDefaultShipping),
-        isDefaultBilling: isFirst || Boolean(payload.isDefaultBilling),
-      },
+      { ...payload, customerId, isDefaultShipping: isFirst || Boolean(payload.isDefaultShipping), isDefaultBilling: isFirst || Boolean(payload.isDefaultBilling) },
       t
     );
 
@@ -134,19 +123,14 @@ const removeAddress = async (req, customerId, addressId) => {
     const wasDefaultBilling = address.isDefaultBilling;
     await repo.destroyAddress(address, t);
 
-    // A customer with addresses left always has exactly one default of each kind.
     if (wasDefaultShipping || wasDefaultBilling) {
       const remaining = await repo.listAddresses(customerId);
       const next = remaining.find((a) => a.id !== addressId);
       if (next) {
-        await repo.updateAddress(
-          next,
-          {
-            isDefaultShipping: wasDefaultShipping ? true : next.isDefaultShipping,
-            isDefaultBilling: wasDefaultBilling ? true : next.isDefaultBilling,
-          },
-          t
-        );
+        await repo.updateAddress(next, {
+          isDefaultShipping: wasDefaultShipping ? true : next.isDefaultShipping,
+          isDefaultBilling: wasDefaultBilling ? true : next.isDefaultBilling,
+        }, t);
       }
     }
 
@@ -155,17 +139,21 @@ const removeAddress = async (req, customerId, addressId) => {
   });
 };
 
+// Called by the orders phase when an order is confirmed / returned, to keep
+// the denormalised spend stats in sync. Never accepted directly from a client.
+const applyOrderStats = async (customerId, { deltaSpend = 0, deltaOrderCount = 0, lastPurchaseAt }, transaction) => {
+  const customer = await repo.findById(customerId);
+  if (!customer) return null;
+  const nextSpend = Math.max(0, Number(customer.totalSpend || 0) + Number(deltaSpend));
+  const nextCount = Math.max(0, Number(customer.orderCount || 0) + Number(deltaOrderCount));
+  return repo.update(customer, {
+    totalSpend: nextSpend,
+    orderCount: nextCount,
+    ...(lastPurchaseAt ? { lastPurchaseAt } : {}),
+  }, transaction);
+};
+
 module.exports = {
-  list,
-  get,
-  getMine,
-  createForUser,
-  update,
-  setMarketingPreferences,
-  listAddresses,
-  addAddress,
-  updateAddress,
-  removeAddress,
-  present,
-  DERIVED,
+  list, get, getMine, createForUser, update, setMarketingPreferences,
+  listAddresses, addAddress, updateAddress, removeAddress, applyOrderStats, present, DERIVED,
 };

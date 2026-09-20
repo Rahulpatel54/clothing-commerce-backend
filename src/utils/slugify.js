@@ -11,10 +11,6 @@ function slugify(value) {
     .slice(0, 180);
 }
 
-/**
- * Slugs must be unique. `exists` is an async predicate supplied by the caller
- * (the repository), so this helper stays free of database knowledge.
- */
 async function uniqueSlug(value, exists, { ignoreId } = {}) {
   const base = slugify(value) || 'item';
   let candidate = base;

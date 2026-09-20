@@ -13,7 +13,5 @@ module.exports = {
     });
     await queryInterface.addIndex('roles', ['name'], { unique: true, name: 'roles_name_unique' });
   },
-  async down(queryInterface) {
-    await queryInterface.dropTable('roles');
-  },
+  async down(queryInterface) { await queryInterface.dropTable('roles'); },
 };

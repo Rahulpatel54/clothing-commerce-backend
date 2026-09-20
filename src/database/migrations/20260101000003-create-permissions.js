@@ -12,13 +12,7 @@ module.exports = {
       updated_at: { type: Sequelize.DATE, allowNull: false, defaultValue: Sequelize.fn('NOW') },
       deleted_at: { type: Sequelize.DATE },
     });
-    await queryInterface.addConstraint('permissions', {
-      fields: ['resource', 'action'],
-      type: 'unique',
-      name: 'permissions_resource_action_unique',
-    });
+    await queryInterface.addConstraint('permissions', { fields: ['resource', 'action'], type: 'unique', name: 'permissions_resource_action_unique' });
   },
-  async down(queryInterface) {
-    await queryInterface.dropTable('permissions');
-  },
+  async down(queryInterface) { await queryInterface.dropTable('permissions'); },
 };

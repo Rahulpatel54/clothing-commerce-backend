@@ -1,6 +1,5 @@
 'use strict';
 
-// Single response envelope used by every endpoint on the platform.
 function success(res, { data = null, message = 'OK', statusCode = 200, meta } = {}) {
   return res.status(statusCode).json({
     success: true,

@@ -21,6 +21,5 @@ const build = (options = {}) =>
 
 module.exports = {
   globalLimiter: build(),
-  // Stricter bucket for login / password reset / OTP, used from the auth phase onward.
   authLimiter: build({ windowMs: 15 * 60 * 1000, max: 10 }),
 };

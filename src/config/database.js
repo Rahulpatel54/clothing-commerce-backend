@@ -1,6 +1,5 @@
 'use strict';
 
-// Consumed by sequelize-cli (via .sequelizerc) and by config/sequelize.js.
 const config = require('./index');
 
 const base = {

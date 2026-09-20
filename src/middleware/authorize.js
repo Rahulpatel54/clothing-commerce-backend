@@ -3,11 +3,6 @@
 const ApiError = require('../utils/ApiError');
 const rbac = require('../modules/users/rbac.service');
 
-/**
- * authorize('products:create', 'products:update') -> express middleware.
- * Passes when the user holds ANY of the listed permissions. Admins pass everything.
- * Permissions are resolved user -> roles -> permissions once per request and cached on req.
- */
 function authorize(...required) {
   return async (req, res, next) => {
     try {
@@ -23,10 +18,6 @@ function authorize(...required) {
   };
 }
 
-/**
- * Customer-scoped resources: the owner may act on their own record, anyone else
- * needs the admin-level permission. Guards against IDOR on every :id route.
- */
 function authorizeSelfOr(...required) {
   return async (req, res, next) => {
     try {

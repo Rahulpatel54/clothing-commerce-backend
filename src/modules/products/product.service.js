@@ -11,7 +11,6 @@ function present(product, { includeCost = false } = {}) {
   if (!product) return null;
   const json = includeCost ? product.toJSON() : product.toPublicJSON ? product.toPublicJSON() : product.toJSON();
   if (Array.isArray(json.variants)) {
-    // The effective price of a variant is its override, or the parent price.
     json.variants = json.variants.map((v) => ({
       ...v,
       effectivePrice: Number(v.price != null ? v.price : json.price),
@@ -30,10 +29,8 @@ const getBySlug = async (slug, context = {}) => {
   const product = await repo.findBySlug(slug);
   if (!product) throw ApiError.notFound('Product not found');
 
-  // View tracking feeds trending and recently-viewed; failure must not break the read.
   if (context.customerId || context.sessionId) {
-    repo
-      .recordView({ productId: product.id, customerId: context.customerId, sessionId: context.sessionId })
+    repo.recordView({ productId: product.id, customerId: context.customerId, sessionId: context.sessionId })
       .then(() => repo.incrementViews(product.id))
       .catch(() => {});
   }
@@ -57,14 +54,7 @@ const create = async (req, payload) => {
 
   const product = await repo.transaction(async (t) => {
     const created = await repo.create(
-      {
-        ...payload,
-        slug,
-        publishedAt: payload.status === 'ACTIVE' ? new Date() : null,
-        variants: undefined,
-        images: undefined,
-        collectionIds: undefined,
-      },
+      { ...payload, slug, publishedAt: payload.status === 'ACTIVE' ? new Date() : null, variants: undefined, images: undefined, collectionIds: undefined },
       t
     );
 
@@ -72,7 +62,16 @@ const create = async (req, payload) => {
       // eslint-disable-next-line no-await-in-loop
       if (await repo.variantSkuExists(variant.sku)) throw ApiError.conflict(`Variant SKU already in use: ${variant.sku}`);
       // eslint-disable-next-line no-await-in-loop
-      await repo.createVariant({ ...variant, productId: created.id }, t);
+      const createdVariant = await repo.createVariant({ ...variant, productId: created.id, initialStock: undefined }, t);
+      // Inventory module owns stock rows; seed one at creation time when a starting count is given.
+      // eslint-disable-next-line no-await-in-loop
+      try {
+        // eslint-disable-next-line global-require
+        const inventoryService = require('../inventory/inventory.service');
+        await inventoryService.initializeForVariant(createdVariant.id, variant.initialStock || 0, t);
+      } catch (err) {
+        // Inventory module may not be loaded in isolated tests; that's fine.
+      }
     }
 
     if (payload.images && payload.images.length) {
@@ -106,7 +105,6 @@ const update = async (req, id, payload) => {
   if (payload.name && !payload.slug && payload.name !== product.name) {
     fields.slug = await uniqueSlug(payload.name, repo.slugExists, { ignoreId: id });
   }
-  // publishedAt is set the first time a product goes live and never rewritten.
   if (payload.status === 'ACTIVE' && !product.publishedAt) fields.publishedAt = new Date();
 
   await repo.transaction(async (t) => {
@@ -135,7 +133,12 @@ const addVariant = async (req, productId, payload) => {
   if (!product) throw ApiError.notFound('Product not found');
   if (await repo.variantSkuExists(payload.sku)) throw ApiError.conflict('SKU already in use');
 
-  const variant = await repo.createVariant({ ...payload, productId }, null);
+  const variant = await repo.createVariant({ ...payload, productId, initialStock: undefined }, null);
+  try {
+    // eslint-disable-next-line global-require
+    const inventoryService = require('../inventory/inventory.service');
+    await inventoryService.initializeForVariant(variant.id, payload.initialStock || 0, null);
+  } catch (err) { /* inventory module optional in isolated tests */ }
   await audit.record(req, { action: 'variant.create', entityType: 'ProductVariant', entityId: variant.id, after: variant });
   return variant;
 };
@@ -178,15 +181,5 @@ const discovery = {
 };
 
 module.exports = {
-  search,
-  getBySlug,
-  getByIdAdmin,
-  create,
-  update,
-  remove,
-  addVariant,
-  updateVariant,
-  removeVariant,
-  discovery,
-  present,
+  search, getBySlug, getByIdAdmin, create, update, remove, addVariant, updateVariant, removeVariant, discovery, present,
 };

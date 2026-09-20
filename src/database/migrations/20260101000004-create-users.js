@@ -9,11 +9,7 @@ module.exports = {
       password_hash: { type: Sequelize.STRING(255), allowNull: false },
       first_name: { type: Sequelize.STRING(100) },
       last_name: { type: Sequelize.STRING(100) },
-      status: {
-        type: Sequelize.ENUM('ACTIVE', 'INACTIVE', 'SUSPENDED', 'PENDING_VERIFICATION'),
-        allowNull: false,
-        defaultValue: 'ACTIVE',
-      },
+      status: { type: Sequelize.ENUM('ACTIVE', 'INACTIVE', 'SUSPENDED', 'PENDING_VERIFICATION'), allowNull: false, defaultValue: 'ACTIVE' },
       email_verified_at: { type: Sequelize.DATE },
       phone_verified_at: { type: Sequelize.DATE },
       mfa_enabled: { type: Sequelize.BOOLEAN, allowNull: false, defaultValue: false },
@@ -25,16 +21,10 @@ module.exports = {
       updated_at: { type: Sequelize.DATE, allowNull: false, defaultValue: Sequelize.fn('NOW') },
       deleted_at: { type: Sequelize.DATE },
     });
-
     await queryInterface.addIndex('users', ['email'], { unique: true, name: 'users_email_unique' });
     await queryInterface.addIndex('users', ['status'], { name: 'users_status_idx' });
     await queryInterface.addIndex('users', ['created_at'], { name: 'users_created_at_idx' });
-    await queryInterface.addConstraint('users', {
-      fields: ['failed_login_attempts'],
-      type: 'check',
-      name: 'users_failed_login_attempts_non_negative',
-      where: { failed_login_attempts: { [Sequelize.Op.gte]: 0 } },
-    });
+    await queryInterface.addConstraint('users', { fields: ['failed_login_attempts'], type: 'check', name: 'users_failed_login_attempts_non_negative', where: { failed_login_attempts: { [Sequelize.Op.gte]: 0 } } });
   },
   async down(queryInterface) {
     await queryInterface.dropTable('users');

@@ -11,11 +11,6 @@ function extract(req) {
   return value;
 }
 
-/**
- * Populates req.user = { id, email, roles, permissions } from a valid access token.
- * Claims are re-checked against the database so a disabled account cannot keep
- * using a token that has not expired yet.
- */
 const authenticate = async (req, res, next) => {
   try {
     const token = extract(req);
@@ -39,7 +34,6 @@ const authenticate = async (req, res, next) => {
   }
 };
 
-// Attaches req.user when a token is present, but never rejects (guest carts, public product views).
 const optionalAuthenticate = async (req, res, next) => {
   if (!extract(req)) return next();
   return authenticate(req, res, (err) => (err ? next() : next()));

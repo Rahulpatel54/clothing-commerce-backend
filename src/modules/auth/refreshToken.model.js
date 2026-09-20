@@ -6,7 +6,6 @@ module.exports = (sequelize, DataTypes) => {
     {
       id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
       userId: { type: DataTypes.UUID, allowNull: false },
-      // Only the SHA-256 hash is stored; the raw token never touches the database.
       tokenHash: { type: DataTypes.STRING(64), allowNull: false, unique: true },
       userAgent: { type: DataTypes.STRING(255) },
       ipAddress: { type: DataTypes.STRING(64) },

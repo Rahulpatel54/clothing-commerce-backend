@@ -41,6 +41,13 @@ const schema = Joi.object({
 
   SEED_ADMIN_EMAIL: Joi.string().email().default('admin@example.com'),
   SEED_ADMIN_PASSWORD: Joi.string().default('ChangeMe123!'),
+
+  PAYMENTS_PROVIDER: Joi.string().default('mock'),
+  PAYMENTS_WEBHOOK_SECRET: Joi.string().default('change-me-webhook'),
+  CART_EXPIRY_MINUTES: Joi.number().default(4320),
+  CART_MAX_QTY_PER_VARIANT: Joi.number().default(5),
+  REFERRAL_RETURN_WINDOW_DAYS: Joi.number().default(30),
+  WALLET_CREDIT_EXPIRY_DAYS: Joi.number().default(365),
 }).unknown();
 
 const { value: env, error } = schema.validate(process.env, { abortEarly: false });
@@ -81,4 +88,8 @@ module.exports = {
   },
   logLevel: env.LOG_LEVEL,
   seed: { adminEmail: env.SEED_ADMIN_EMAIL, adminPassword: env.SEED_ADMIN_PASSWORD },
+  payments: { provider: env.PAYMENTS_PROVIDER, webhookSecret: env.PAYMENTS_WEBHOOK_SECRET },
+  cart: { expiryMinutes: env.CART_EXPIRY_MINUTES, maxQtyPerVariant: env.CART_MAX_QTY_PER_VARIANT },
+  referral: { returnWindowDays: env.REFERRAL_RETURN_WINDOW_DAYS },
+  wallet: { creditExpiryDays: env.WALLET_CREDIT_EXPIRY_DAYS },
 };

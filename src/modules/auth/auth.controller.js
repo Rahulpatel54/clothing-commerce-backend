@@ -8,6 +8,7 @@ const context = (req) => ({
   ip: req.ip,
   userAgent: req.headers['user-agent'],
   deviceLabel: req.headers['x-device-label'],
+  sessionId: req.headers['x-session-id'],
 });
 
 const register = catchAsync(async (req, res) => {

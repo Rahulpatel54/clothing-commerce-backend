@@ -6,7 +6,7 @@ const config = require('../../config');
 const RESOURCES = [
   'users', 'customers', 'products', 'inventory', 'orders', 'payments',
   'promotions', 'referrals', 'loyalty', 'reviews', 'ugc', 'expenses',
-  'finance', 'marketing', 'analytics', 'notifications', 'settings',
+  'finance', 'marketing', 'analytics', 'notifications', 'settings', 'cart', 'wishlist',
 ];
 const ACTIONS = ['create', 'read', 'update', 'delete'];
 
@@ -16,7 +16,6 @@ const ROLES = [
   { name: 'customer', description: 'Storefront customer' },
 ];
 
-// Staff get everything except destructive/financial-sensitive operations.
 const STAFF_DENY = new Set(['users:delete', 'users:create', 'finance:delete', 'settings:update', 'settings:delete']);
 
 module.exports = {
@@ -30,10 +29,7 @@ module.exports = {
     const permissions = [];
     RESOURCES.forEach((resource) => {
       ACTIONS.forEach((action) => {
-        permissions.push({
-          name: `${resource}:${action}`, resource, action,
-          description: `${action} ${resource}`, created_at: now, updated_at: now,
-        });
+        permissions.push({ name: `${resource}:${action}`, resource, action, description: `${action} ${resource}`, created_at: now, updated_at: now });
       });
     });
     await queryInterface.bulkInsert('permissions', permissions, { ignoreDuplicates: true });
@@ -53,23 +49,13 @@ module.exports = {
 
     const passwordHash = await bcrypt.hash(config.seed.adminPassword, config.auth.bcryptRounds);
     await queryInterface.bulkInsert('users', [{
-      email: config.seed.adminEmail.toLowerCase(),
-      password_hash: passwordHash,
-      first_name: 'Platform',
-      last_name: 'Admin',
-      status: 'ACTIVE',
-      email_verified_at: now,
-      created_at: now,
-      updated_at: now,
+      email: config.seed.adminEmail.toLowerCase(), password_hash: passwordHash, first_name: 'Platform', last_name: 'Admin',
+      status: 'ACTIVE', email_verified_at: now, created_at: now, updated_at: now,
     }], { ignoreDuplicates: true });
 
-    const [adminRows] = await queryInterface.sequelize.query(
-      `SELECT id FROM users WHERE email = '${config.seed.adminEmail.toLowerCase()}' LIMIT 1;`
-    );
+    const [adminRows] = await queryInterface.sequelize.query(`SELECT id FROM users WHERE email = '${config.seed.adminEmail.toLowerCase()}' LIMIT 1;`);
     if (adminRows.length) {
-      await queryInterface.bulkInsert('user_roles', [{
-        user_id: adminRows[0].id, role_id: roleId.admin, created_at: now, updated_at: now,
-      }], { ignoreDuplicates: true });
+      await queryInterface.bulkInsert('user_roles', [{ user_id: adminRows[0].id, role_id: roleId.admin, created_at: now, updated_at: now }], { ignoreDuplicates: true });
     }
 
     await queryInterface.bulkInsert('settings', [

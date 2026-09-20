@@ -2,8 +2,6 @@
 
 const db = require('../../models');
 
-// The only place in the auth module where Sequelize is touched.
-
 const findUserByEmail = (email, { withSecrets = false } = {}) =>
   (withSecrets ? db.User.scope('withSecrets') : db.User).findOne({ where: { email: String(email).toLowerCase() } });
 
@@ -23,17 +21,11 @@ const findUserWithRoles = (id) =>
   });
 
 const createUser = (payload, transaction) => db.User.create(payload, { transaction });
-
 const updateUser = (user, fields, transaction) => user.update(fields, { transaction });
-
 const findRoleByName = (name, transaction) => db.Role.findOne({ where: { name }, transaction });
-
 const assignRole = (user, role, transaction) => user.addRole(role, { transaction });
-
 const createRefreshToken = (payload, transaction) => db.RefreshToken.create(payload, { transaction });
-
-const findRefreshTokenByHash = (tokenHash, transaction) =>
-  db.RefreshToken.findOne({ where: { tokenHash }, transaction });
+const findRefreshTokenByHash = (tokenHash, transaction) => db.RefreshToken.findOne({ where: { tokenHash }, transaction });
 
 const revokeRefreshToken = (token, { reason, replacedByTokenId = null, transaction } = {}) =>
   token.update({ revokedAt: new Date(), revokedReason: reason, replacedByTokenId }, { transaction });
@@ -45,35 +37,16 @@ const revokeAllRefreshTokensForUser = (userId, { reason, transaction } = {}) =>
   );
 
 const createPasswordResetToken = (payload, transaction) => db.PasswordResetToken.create(payload, { transaction });
-
-const findPasswordResetByHash = (tokenHash, transaction) =>
-  db.PasswordResetToken.findOne({ where: { tokenHash }, transaction });
-
+const findPasswordResetByHash = (tokenHash, transaction) => db.PasswordResetToken.findOne({ where: { tokenHash }, transaction });
 const markPasswordResetUsed = (token, transaction) => token.update({ usedAt: new Date() }, { transaction });
 
 const invalidateOtherPasswordResets = (userId, transaction) =>
-  db.PasswordResetToken.update(
-    { usedAt: new Date() },
-    { where: { userId, usedAt: null }, transaction }
-  );
+  db.PasswordResetToken.update({ usedAt: new Date() }, { where: { userId, usedAt: null }, transaction });
 
 const transaction = (fn) => db.sequelize.transaction(fn);
 
 module.exports = {
-  findUserByEmail,
-  findUserById,
-  findUserWithRoles,
-  createUser,
-  updateUser,
-  findRoleByName,
-  assignRole,
-  createRefreshToken,
-  findRefreshTokenByHash,
-  revokeRefreshToken,
-  revokeAllRefreshTokensForUser,
-  createPasswordResetToken,
-  findPasswordResetByHash,
-  markPasswordResetUsed,
-  invalidateOtherPasswordResets,
-  transaction,
+  findUserByEmail, findUserById, findUserWithRoles, createUser, updateUser, findRoleByName, assignRole,
+  createRefreshToken, findRefreshTokenByHash, revokeRefreshToken, revokeAllRefreshTokensForUser,
+  createPasswordResetToken, findPasswordResetByHash, markPasswordResetUsed, invalidateOtherPasswordResets, transaction,
 };

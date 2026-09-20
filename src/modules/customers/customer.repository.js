@@ -13,22 +13,17 @@ const list = async ({ filters = {}, page, limit, offset, sort = 'createdAt', ord
   if (filters.minSpend) where.totalSpend = { [Op.gte]: filters.minSpend };
 
   const userWhere = filters.search
-    ? {
-        [Op.or]: [
-          { email: { [Op.iLike]: `%${filters.search}%` } },
-          { firstName: { [Op.iLike]: `%${filters.search}%` } },
-          { lastName: { [Op.iLike]: `%${filters.search}%` } },
-        ],
-      }
+    ? { [Op.or]: [
+        { email: { [Op.iLike]: `%${filters.search}%` } },
+        { firstName: { [Op.iLike]: `%${filters.search}%` } },
+        { lastName: { [Op.iLike]: `%${filters.search}%` } },
+      ] }
     : undefined;
 
   const { rows, count } = await db.Customer.findAndCountAll({
     where,
     include: [{ ...userInclude, ...(userWhere ? { where: userWhere, required: true } : {}) }],
-    order: [[sort, order]],
-    limit,
-    offset,
-    distinct: true,
+    order: [[sort, order]], limit, offset, distinct: true,
   });
   return { rows, count, page, limit };
 };
@@ -45,27 +40,12 @@ const createAddress = (payload, transaction) => db.Address.create(payload, { tra
 const updateAddress = (address, fields, transaction) => address.update(fields, { transaction });
 const destroyAddress = (address, transaction) => address.destroy({ transaction });
 
-// Clears the flag everywhere else so "default" can only ever point at one row.
 const clearDefaults = (customerId, field, exceptId, transaction) =>
-  db.Address.update(
-    { [field]: false },
-    { where: { customerId, ...(exceptId ? { id: { [Op.ne]: exceptId } } : {}) }, transaction }
-  );
+  db.Address.update({ [field]: false }, { where: { customerId, ...(exceptId ? { id: { [Op.ne]: exceptId } } : {}) }, transaction });
 
 const transaction = (fn) => db.sequelize.transaction(fn);
 
 module.exports = {
-  list,
-  findById,
-  findByUserId,
-  create,
-  update,
-  findAddress,
-  listAddresses,
-  countAddresses,
-  createAddress,
-  updateAddress,
-  destroyAddress,
-  clearDefaults,
-  transaction,
+  list, findById, findByUserId, create, update, findAddress, listAddresses, countAddresses,
+  createAddress, updateAddress, destroyAddress, clearDefaults, transaction,
 };

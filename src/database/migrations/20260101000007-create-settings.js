@@ -12,7 +12,5 @@ module.exports = {
       updated_at: { type: Sequelize.DATE, allowNull: false, defaultValue: Sequelize.fn('NOW') },
     });
   },
-  async down(queryInterface) {
-    await queryInterface.dropTable('settings');
-  },
+  async down(queryInterface) { await queryInterface.dropTable('settings'); },
 };

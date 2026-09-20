@@ -22,23 +22,15 @@ module.exports = (sequelize, DataTypes) => {
       fit: { type: DataTypes.STRING(50) },
       careInstructions: { type: DataTypes.TEXT },
       isFeatured: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
-      // Denormalised counters. Only the orders and discovery services write these.
       salesCount: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
       viewsCount: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
       publishedAt: { type: DataTypes.DATE },
     },
-    {
-      tableName: 'products',
-      paranoid: true,
-      scopes: {
-        published: { where: { status: 'ACTIVE' } },
-      },
-    }
+    { tableName: 'products', paranoid: true, scopes: { published: { where: { status: 'ACTIVE' } } } }
   );
 
   Product.STATUS = PRODUCT_STATUS;
 
-  // costPrice is margin data: never exposed on public endpoints.
   Product.prototype.toPublicJSON = function toPublicJSON() {
     const json = this.toJSON();
     delete json.costPrice;
@@ -54,12 +46,7 @@ module.exports = (sequelize, DataTypes) => {
     Product.belongsTo(db.Category, { foreignKey: 'category_id', as: 'category' });
     Product.hasMany(db.ProductVariant, { foreignKey: 'product_id', as: 'variants' });
     Product.hasMany(db.ProductImage, { foreignKey: 'product_id', as: 'images' });
-    Product.belongsToMany(db.Collection, {
-      through: 'product_collections',
-      foreignKey: 'product_id',
-      otherKey: 'collection_id',
-      as: 'collections',
-    });
+    Product.belongsToMany(db.Collection, { through: 'product_collections', foreignKey: 'product_id', otherKey: 'collection_id', as: 'collections' });
   };
 
   return Product;

@@ -7,8 +7,6 @@ const { sequelize, Sequelize } = require('../config/sequelize');
 const modulesDir = path.join(__dirname, '..', 'modules');
 const db = {};
 
-// Models live inside their own domain module (src/modules/<domain>/*.model.js);
-// this registry loads them and wires associations in one place.
 function loadModels(dir) {
   if (!fs.existsSync(dir)) return;
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {

@@ -10,7 +10,6 @@ module.exports = (sequelize, DataTypes) => {
       size: { type: DataTypes.STRING(20), allowNull: false },
       color: { type: DataTypes.STRING(50), allowNull: false },
       colorHex: { type: DataTypes.STRING(7) },
-      // Null means "inherit the parent product price". Resolution happens in the service.
       price: { type: DataTypes.DECIMAL(12, 2), validate: { min: 0 } },
       compareAtPrice: { type: DataTypes.DECIMAL(12, 2), validate: { min: 0 } },
       costPrice: { type: DataTypes.DECIMAL(12, 2), validate: { min: 0 } },
@@ -25,6 +24,7 @@ module.exports = (sequelize, DataTypes) => {
   ProductVariant.associate = (db) => {
     ProductVariant.belongsTo(db.Product, { foreignKey: 'product_id', as: 'product' });
     ProductVariant.hasMany(db.ProductImage, { foreignKey: 'variant_id', as: 'images' });
+    ProductVariant.hasOne(db.Inventory, { foreignKey: 'variant_id', as: 'inventory' });
   };
 
   return ProductVariant;

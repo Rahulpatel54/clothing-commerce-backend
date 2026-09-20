@@ -33,7 +33,6 @@ function normalize(err) {
   return new ApiError(err.statusCode || 500, err.message || 'Internal server error', { isOperational: false });
 }
 
-// Central error handler: the only place that formats an error response.
 // eslint-disable-next-line no-unused-vars
 module.exports = (err, req, res, next) => {
   const error = normalize(err);

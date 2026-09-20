@@ -17,6 +17,7 @@ const variantBody = Joi.object({
   weightGrams: Joi.number().integer().min(0),
   position: Joi.number().integer().min(0),
   isActive: Joi.boolean(),
+  initialStock: Joi.number().integer().min(0),
 });
 
 const imageBody = Joi.object({
@@ -67,9 +68,7 @@ module.exports = {
   },
   bySlug: { params: Joi.object({ slug: Joi.string().max(180).required() }) },
   byId: { params: Joi.object({ id }) },
-  discovery: {
-    query: Joi.object({ limit: Joi.number().min(1).max(50).default(12), days: Joi.number().min(1).max(90).default(7) }),
-  },
+  discovery: { query: Joi.object({ limit: Joi.number().min(1).max(50).default(12), days: Joi.number().min(1).max(90).default(7) }) },
   create: {
     body: Joi.object({
       ...productCore,
@@ -92,48 +91,32 @@ module.exports = {
   taxonomyBySlug: { params: Joi.object({ slug: Joi.string().max(180).required() }) },
   categoryCreate: {
     body: Joi.object({
-      name: Joi.string().max(120).required(),
-      slug: Joi.string().max(180),
-      description: Joi.string().max(2000),
-      parentId: Joi.string().uuid().allow(null),
-      imageUrl: Joi.string().uri().max(500),
-      position: Joi.number().integer().min(0),
-      isActive: Joi.boolean(),
+      name: Joi.string().max(120).required(), slug: Joi.string().max(180), description: Joi.string().max(2000),
+      parentId: Joi.string().uuid().allow(null), imageUrl: Joi.string().uri().max(500),
+      position: Joi.number().integer().min(0), isActive: Joi.boolean(),
     }),
   },
   categoryUpdate: {
     params: Joi.object({ id }),
     body: Joi.object({
-      name: Joi.string().max(120),
-      slug: Joi.string().max(180),
-      description: Joi.string().max(2000),
-      parentId: Joi.string().uuid().allow(null),
-      imageUrl: Joi.string().uri().max(500),
-      position: Joi.number().integer().min(0),
-      isActive: Joi.boolean(),
+      name: Joi.string().max(120), slug: Joi.string().max(180), description: Joi.string().max(2000),
+      parentId: Joi.string().uuid().allow(null), imageUrl: Joi.string().uri().max(500),
+      position: Joi.number().integer().min(0), isActive: Joi.boolean(),
     }).min(1),
   },
   collectionCreate: {
     body: Joi.object({
-      name: Joi.string().max(120).required(),
-      slug: Joi.string().max(180),
-      description: Joi.string().max(2000),
-      imageUrl: Joi.string().uri().max(500),
-      isActive: Joi.boolean(),
-      startsAt: Joi.date().iso(),
-      endsAt: Joi.date().iso().greater(Joi.ref('startsAt')),
+      name: Joi.string().max(120).required(), slug: Joi.string().max(180), description: Joi.string().max(2000),
+      imageUrl: Joi.string().uri().max(500), isActive: Joi.boolean(),
+      startsAt: Joi.date().iso(), endsAt: Joi.date().iso().greater(Joi.ref('startsAt')),
     }),
   },
   collectionUpdate: {
     params: Joi.object({ id }),
     body: Joi.object({
-      name: Joi.string().max(120),
-      slug: Joi.string().max(180),
-      description: Joi.string().max(2000),
-      imageUrl: Joi.string().uri().max(500),
-      isActive: Joi.boolean(),
-      startsAt: Joi.date().iso(),
-      endsAt: Joi.date().iso(),
+      name: Joi.string().max(120), slug: Joi.string().max(180), description: Joi.string().max(2000),
+      imageUrl: Joi.string().uri().max(500), isActive: Joi.boolean(),
+      startsAt: Joi.date().iso(), endsAt: Joi.date().iso(),
     }).min(1),
   },
 };

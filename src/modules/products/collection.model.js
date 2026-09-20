@@ -17,12 +17,7 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   Collection.associate = (db) => {
-    Collection.belongsToMany(db.Product, {
-      through: 'product_collections',
-      foreignKey: 'collection_id',
-      otherKey: 'product_id',
-      as: 'products',
-    });
+    Collection.belongsToMany(db.Product, { through: 'product_collections', foreignKey: 'collection_id', otherKey: 'product_id', as: 'products' });
   };
 
   return Collection;

@@ -15,34 +15,10 @@ const spec = swaggerJsdoc({
     },
     servers: [{ url: `http://localhost:${config.port}${config.apiPrefix}`, description: 'Local' }],
     components: {
-      securitySchemes: {
-        bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
-      },
+      securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' } },
       schemas: {
-        SuccessResponse: {
-          type: 'object',
-          properties: {
-            success: { type: 'boolean', example: true },
-            message: { type: 'string', example: 'OK' },
-            data: { nullable: true },
-            requestId: { type: 'string', format: 'uuid' },
-          },
-        },
-        ErrorResponse: {
-          type: 'object',
-          properties: {
-            success: { type: 'boolean', example: false },
-            error: {
-              type: 'object',
-              properties: {
-                code: { type: 'string', example: 'VALIDATION_ERROR' },
-                message: { type: 'string' },
-                details: { type: 'array', items: { type: 'object' } },
-              },
-            },
-            requestId: { type: 'string', format: 'uuid' },
-          },
-        },
+        SuccessResponse: { type: 'object', properties: { success: { type: 'boolean', example: true }, message: { type: 'string', example: 'OK' }, data: { nullable: true }, requestId: { type: 'string', format: 'uuid' } } },
+        ErrorResponse: { type: 'object', properties: { success: { type: 'boolean', example: false }, error: { type: 'object', properties: { code: { type: 'string', example: 'VALIDATION_ERROR' }, message: { type: 'string' }, details: { type: 'array', items: { type: 'object' } } } }, requestId: { type: 'string', format: 'uuid' } } },
       },
       responses: {
         BadRequest: { description: 'Invalid request', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
@@ -55,6 +31,14 @@ const spec = swaggerJsdoc({
     tags: [
       { name: 'Health', description: 'Liveness and readiness probes' },
       { name: 'Auth', description: 'Registration, login, token rotation and password reset' },
+      { name: 'Inventory', description: 'Stock levels and movements' },
+      { name: 'Cart', description: 'Guest and customer shopping carts' },
+      { name: 'Checkout', description: 'Checkout and order placement' },
+      { name: 'Orders', description: 'Order lifecycle' },
+      { name: 'Payments', description: 'Payments and refunds' },
+      { name: 'Loyalty', description: 'Wallet ledger' },
+      { name: 'Referrals', description: 'Referral program' },
+      { name: 'Wishlist', description: 'Customer wishlists' },
     ],
   },
   apis: [path.join(__dirname, '..', 'modules', '**', '*.routes.js')],

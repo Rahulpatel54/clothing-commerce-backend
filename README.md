@@ -1,91 +1,87 @@
 # Clothing Commerce & Business Management Backend
 
 Modular monolith on Node.js + Express + PostgreSQL + Sequelize.
-This repository is being built in phases; **this slice covers phases 1–6** of the 25-phase plan:
-project setup, configuration, the database/Sequelize foundation, authentication, RBAC, users/customers and the product catalogue with search and discovery.
+This build covers **phases 1–12** of the 25-phase plan: project setup, auth, RBAC,
+users/customers, catalog + discovery, inventory, cart, promotions + checkout,
+orders, payments, and the loyalty wallet + referral program — plus a customer
+wishlist feature.
 
-## What exists now
+## What's new in this build (phases 7–12 + extras)
 
 | Area | Status |
 | --- | --- |
-| Project layout (`src/modules/*`, `middleware`, `jobs`, `integrations`, `utils`, `config`, `docs`) | Done |
-| Env-validated config (Joi), fail-fast on boot | Done |
-| Structured logging (pino) with secret redaction + request IDs | Done |
-| Central error handler, `ApiError`, Sequelize error mapping | Done |
-| Single response envelope (`success` / `paginated`) | Done |
-| Joi validation middleware (strips unknown fields, reports all errors) | Done |
-| Helmet, CORS, compression, rate limiting (global + auth bucket) | Done |
-| Sequelize instance, model auto-registry, association wiring | Done |
-| Migrations: `roles`, `permissions`, `users`, `user_roles`, `role_permissions`, `audit_logs`, `settings` | Done |
-| Seeder: system roles, full permission matrix, admin user, base settings | Done |
-| Swagger/OpenAPI generated from route JSDoc + Swagger UI at `/docs` | Done |
-| Health module (`/health/live`, `/health/ready`) as the reference vertical slice | Done |
-| Jest + Supertest harness with negative cases | Done |
-| Auth: register, login, logout, refresh rotation, password reset | Done |
-| Migrations: `refresh_tokens`, `password_reset_tokens` | Done |
-| `authenticate` middleware (`req.user`), account lockout, MFA seam | Done |
-| RBAC `authorize()` / `authorizeSelfOr()` with per-request permission cache | Done |
-| Audit-log writer used by every privileged mutation | Done |
-| Users module (admin CRUD, role assignment, status changes) | Done |
-| Customers module: profiles, addresses, marketing opt-outs, derived spend stats | Done |
-| Catalog: categories, collections, products, variants, images | Done |
-| Discovery: trigram + full-text search, filters, facets, new arrivals, best sellers, trending, related, recently viewed | Done |
-| Inventory, cart, checkout, orders, payments, everything else | **Next phases** |
+| **Inventory** (`inventory`, `inventory_movements`) — reserve/release/commit with row-level locks (`SELECT ... FOR UPDATE`) so concurrent checkouts cannot oversell; purchases, damage, manual adjustments | Done |
+| **Cart** (`carts`, `cart_items`) — guest + customer carts, per-variant quantity cap, live price/availability recompute on every read, guest→customer merge on login, cart expiry | Done |
+| **Promotions engine** (`promotions`, `promotion_rules`, `coupons`, `coupon_redemptions`) — percentage/fixed, min order, product/category include & exclude, first-order-only, customer-specific, time windows, global + per-customer usage limits, max discount cap, stacking rules | Done |
+| **Checkout** — one transaction: revalidate cart → resolve address → evaluate promotions → shipping → tax → optional wallet redemption → reserve stock → create order → clear cart. Idempotency-Key header support | Done |
+| **Orders** (`orders`, `order_items`, `order_status_history`) — full fulfilment + returns state machine as a single transition table, item price/SKU/name snapshots, stock commit on confirm / restock on cancel-after-confirm or return | Done |
+| **Payments** (`payments`, `refunds`) — provider interface + a deterministic mock adapter (`src/integrations/payments`), signature-verified/replay-safe/idempotent webhook handling, server-side amount cross-check, partial/full refunds | Done |
+| **Loyalty wallet** (`wallets`, `wallet_transactions`) — append-only ledger, balance always derived (never stored), per-transaction expiry, balance can never go negative (row-locked debit) | Done |
+| **Referrals** (`referrals`, `referral_events`) — link → signup → purchase → payment → delivery → return-window expiry → validated → reward, pluggable multi-signal fraud evaluator (`src/modules/referrals/fraud.evaluator.js`) | Done |
+| **Wishlist** (`wishlist_items`) — nested under `/customers/:id/wishlist`, idempotent add, owner-or-staff scoped | Done |
+| **Docker** — an `api` service alongside `postgres` and `redis` in `docker-compose.yml`, with its own `Dockerfile` (multi-stage, non-root, runs migrations then boots) | Done |
 
-## Setup
+Everything from phases 1–6 (config, logging, error handling, auth, RBAC, users,
+customers, catalog/discovery) is unchanged and still covered by its original tests;
+see `PROMPT_CHAIN.md` for the phase-by-phase build history.
+
+## Run it
 
 ```bash
-cp .env.example .env          # fill in DB credentials
-docker compose up -d postgres # or point at your own Postgres
-npm install
-npm run db:migrate
-npm run db:seed
-npm run dev
+cp .env.example .env      # fill in secrets for anything beyond local dev
+docker compose up --build # postgres + redis + api, migrations run automatically
 ```
 
 - API: `http://localhost:4000/api/v1`
 - Docs: `http://localhost:4000/docs`
 - Health: `GET /api/v1/health/ready`
 
+Without Docker:
+```bash
+npm install
+npm run db:migrate
+npm run db:seed
+npm run dev
+```
+
 Tests: create a `clothing_commerce_test` database, then `npm test`.
 
-## Conventions every future module must follow
+> **Note on this delivery:** this environment has no network access, so
+> `npm install` could not be run here and the test suite could not be executed
+> against a live Postgres/Redis. Every file has been syntax-checked
+> (`node --check`), and phases 1–6's original test files are reproduced
+> unmodified so `npm test` will re-verify nothing broke once you install
+> dependencies locally or via Docker.
+
+## New conventions introduced in phases 7–12
+
+- **Optional cross-module hooks are always wrapped in try/catch.** e.g. `product.service.create` seeds inventory, `auth.service.register` creates the customer profile and records a referral signup, `order.service.transition` notifies referrals and applies customer stats — none of these can break their caller if the other module is mocked out or briefly unavailable.
+- **Every stock or ledger mutation is append-only + row-locked.** `inventory.repository.findByVariantForUpdate` and `wallet.repository.findByCustomerForUpdate` use `SELECT ... FOR UPDATE`; nothing computes availability or balance from a cached column.
+- **`utils/idempotency.js`** is the shared guard for any POST that must not double-execute (checkout, payment webhooks): a completed request replays its stored response instead of re-running side effects.
+- **The order lifecycle lives in one place**: `src/modules/orders/order.transitions.js`. Every caller — the HTTP layer, the payment webhook, tests — goes through `canTransition()`/`order.service.transition()` rather than writing `status` directly.
+- **Snapshots, not references, for anything financial.** Order items freeze product name/SKU/price/cost at order time; cart items keep a `priceAtAdd` snapshot purely to flag drift, but totals are always recomputed from the live price.
+
+## Conventions carried over from phases 1–6
 
 ```
 routes → controller → validation → service → repository → model → postgres
 ```
 
-- Controllers touch HTTP only: parse `req`, call a service, return via `utils/apiResponse`.
-- Services hold business logic and own transactions.
-- Repositories are the only place Sequelize is called.
-- Models live in their module as `*.model.js` and are auto-loaded by `src/models/index.js`.
-- Every route gets a Joi schema through `middleware/validate`.
-- Every route gets an `@openapi` JSDoc block — docs are generated, never hand-maintained.
+- Controllers touch HTTP only. Services hold business logic and own transactions. Repositories are the only place Sequelize is called.
+- Every route gets a Joi schema through `middleware/validate` and an `@openapi` JSDoc block.
 - Errors are thrown as `ApiError`; nothing formats its own error response.
 - Never trust client-supplied price, stock, permissions, discounts, rewards or order state.
 - Schema changes go through migrations only; `sequelize.sync()` is never used.
 
 ## Notes
 
-- `npm install` was not run in the authoring environment (no network), so the lockfile is absent — install locally to generate it.
-- Redis/BullMQ is off by default (`REDIS_ENABLED=false`); `src/jobs/` and `src/integrations/` are reserved and empty.
+- `npm install` was not run in the authoring environment (no network), so the lockfile is absent — install locally or let the Docker build generate it.
 - `users.mfa_secret_encrypted` is a placeholder for the KEK/DEK encryption service introduced in a later phase.
+- The payments provider is `mock` by default (`PAYMENTS_PROVIDER=mock`); it never calls out to the network and signs webhooks with `PAYMENTS_WEBHOOK_SECRET` using HMAC-SHA256, exactly like a real gateway would.
+- `src/modules/referrals/fraud.evaluator.js` and `src/modules/auth/mfa/mfa.provider.js` follow the same pluggable-seam pattern: business code calls one function and never branches on the implementation.
 
-## Phase 5-6 notes
+## Remaining phases (13–25)
 
-- `authorize('products:create')` resolves user -> roles -> permissions from the database on each request (cached on `req`), so a revoked role takes effect immediately rather than when the token expires. Admins hold an implicit `*`.
-- `authorizeSelfOr('users:read')` is the IDOR guard: owners pass on their own id, everyone else needs the permission.
-- `audit.service.record(req, {...})` accepts the caller's transaction, so the audit row commits with the change it describes, and it scrubs password hashes and token hashes.
-- Customer spend, order count and last purchase are denormalised columns written only by the orders phase; AOV is always computed. Any client attempt to set them is stripped in the service.
-- Partial unique indexes enforce one default shipping address and one default billing address per customer at the database level, not only in code.
-- Variant `price` is nullable and means "inherit the parent product price"; the resolved value is returned as `effectivePrice`. `costPrice` never appears on public responses.
-- Search uses a GIN trigram index on `products.name` plus a full-text index over name/description/tags. Sorting is whitelisted, so nothing user-supplied reaches the ORDER BY clause.
-- `product_views` powers trending (views in a window) and recently-viewed (per customer, or per `X-Session-Id` for guests); trending falls back to best sellers while the table is cold. `products.sales_count` is populated by the orders phase.
-
-## Auth notes
-
-- Refresh tokens are opaque random strings; only their SHA-256 hash is stored, so a database dump cannot be replayed.
-- Rotation on every refresh. Presenting an already-revoked token is treated as theft: every session for that user is revoked.
-- Lockout after `AUTH_MAX_FAILED_ATTEMPTS` failures for `AUTH_LOCK_MINUTES`; login returns one generic 401 whether the email exists or not.
-- Password reset tokens are single-use, hashed, and a successful reset revokes every refresh token. Outside production the token is returned in the response body until the notifications module can deliver it.
-- `src/modules/auth/mfa/mfa.provider.js` is an interface with a no-op implementation; TOTP drops in behind it without touching the auth service.
+Reviews/UGC, expenses/finance, marketing/analytics, notifications + background
+jobs, security hardening/encryption, and test/documentation completion — see
+`PROMPT_CHAIN.md` for the prompt to run for each.

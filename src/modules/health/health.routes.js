@@ -14,9 +14,6 @@ const router = express.Router();
  *     responses:
  *       200:
  *         description: Service process is running
- *         content:
- *           application/json:
- *             schema: { $ref: '#/components/schemas/SuccessResponse' }
  */
 router.get('/live', controller.live);
 

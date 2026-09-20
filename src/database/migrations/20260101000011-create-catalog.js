@@ -65,27 +65,13 @@ module.exports = {
     await queryInterface.addIndex('products', ['sales_count'], { name: 'products_sales_count_idx' });
     await queryInterface.addIndex('products', ['published_at'], { name: 'products_published_at_idx' });
     await queryInterface.addIndex('products', ['tags'], { using: 'gin', name: 'products_tags_gin' });
-    await queryInterface.addConstraint('products', {
-      fields: ['price'],
-      type: 'check',
-      name: 'products_price_non_negative',
-      where: { price: { [Sequelize.Op.gte]: 0 } },
-    });
-    // Discovery: trigram index for fuzzy name search, full-text index for phrase search.
+    await queryInterface.addConstraint('products', { fields: ['price'], type: 'check', name: 'products_price_non_negative', where: { price: { [Sequelize.Op.gte]: 0 } } });
     await queryInterface.sequelize.query('CREATE INDEX products_name_trgm ON products USING gin (name gin_trgm_ops);');
-    await queryInterface.sequelize.query(
-      "CREATE INDEX products_search_fts ON products USING gin (to_tsvector('simple', coalesce(name,'') || ' ' || coalesce(description,'') || ' ' || array_to_string(tags, ' ')));"
-    );
+    await queryInterface.sequelize.query("CREATE INDEX products_search_fts ON products USING gin (to_tsvector('simple', coalesce(name,'') || ' ' || coalesce(description,'') || ' ' || array_to_string(tags, ' ')));");
 
     await queryInterface.createTable('product_variants', {
       id: { type: Sequelize.UUID, defaultValue: Sequelize.literal('gen_random_uuid()'), primaryKey: true },
-      product_id: {
-        type: Sequelize.UUID,
-        allowNull: false,
-        references: { model: 'products', key: 'id' },
-        onDelete: 'CASCADE',
-        onUpdate: 'CASCADE',
-      },
+      product_id: { type: Sequelize.UUID, allowNull: false, references: { model: 'products', key: 'id' }, onDelete: 'CASCADE', onUpdate: 'CASCADE' },
       sku: { type: Sequelize.STRING(64), allowNull: false, unique: true },
       size: { type: Sequelize.STRING(20), allowNull: false },
       color: { type: Sequelize.STRING(50), allowNull: false },
@@ -103,20 +89,11 @@ module.exports = {
     await queryInterface.addIndex('product_variants', ['product_id'], { name: 'product_variants_product_idx' });
     await queryInterface.addIndex('product_variants', ['size'], { name: 'product_variants_size_idx' });
     await queryInterface.addIndex('product_variants', ['color'], { name: 'product_variants_color_idx' });
-    // One row per size+colour combination of a product.
-    await queryInterface.sequelize.query(
-      'CREATE UNIQUE INDEX product_variants_product_size_color_unique ON product_variants (product_id, size, color) WHERE deleted_at IS NULL;'
-    );
+    await queryInterface.sequelize.query('CREATE UNIQUE INDEX product_variants_product_size_color_unique ON product_variants (product_id, size, color) WHERE deleted_at IS NULL;');
 
     await queryInterface.createTable('product_images', {
       id: { type: Sequelize.UUID, defaultValue: Sequelize.literal('gen_random_uuid()'), primaryKey: true },
-      product_id: {
-        type: Sequelize.UUID,
-        allowNull: false,
-        references: { model: 'products', key: 'id' },
-        onDelete: 'CASCADE',
-        onUpdate: 'CASCADE',
-      },
+      product_id: { type: Sequelize.UUID, allowNull: false, references: { model: 'products', key: 'id' }, onDelete: 'CASCADE', onUpdate: 'CASCADE' },
       variant_id: { type: Sequelize.UUID, references: { model: 'product_variants', key: 'id' }, onDelete: 'SET NULL' },
       url: { type: Sequelize.STRING(500), allowNull: false },
       alt_text: { type: Sequelize.STRING(255) },
@@ -125,43 +102,19 @@ module.exports = {
       ...timestamps(Sequelize),
     });
     await queryInterface.addIndex('product_images', ['product_id'], { name: 'product_images_product_idx' });
-    await queryInterface.sequelize.query(
-      'CREATE UNIQUE INDEX product_images_one_primary ON product_images (product_id) WHERE is_primary AND deleted_at IS NULL;'
-    );
+    await queryInterface.sequelize.query('CREATE UNIQUE INDEX product_images_one_primary ON product_images (product_id) WHERE is_primary AND deleted_at IS NULL;');
 
     await queryInterface.createTable('product_collections', {
       id: { type: Sequelize.UUID, defaultValue: Sequelize.literal('gen_random_uuid()'), primaryKey: true },
-      product_id: {
-        type: Sequelize.UUID,
-        allowNull: false,
-        references: { model: 'products', key: 'id' },
-        onDelete: 'CASCADE',
-        onUpdate: 'CASCADE',
-      },
-      collection_id: {
-        type: Sequelize.UUID,
-        allowNull: false,
-        references: { model: 'collections', key: 'id' },
-        onDelete: 'CASCADE',
-        onUpdate: 'CASCADE',
-      },
+      product_id: { type: Sequelize.UUID, allowNull: false, references: { model: 'products', key: 'id' }, onDelete: 'CASCADE', onUpdate: 'CASCADE' },
+      collection_id: { type: Sequelize.UUID, allowNull: false, references: { model: 'collections', key: 'id' }, onDelete: 'CASCADE', onUpdate: 'CASCADE' },
       ...timestamps(Sequelize, { paranoid: false }),
     });
-    await queryInterface.addConstraint('product_collections', {
-      fields: ['product_id', 'collection_id'],
-      type: 'unique',
-      name: 'product_collections_unique',
-    });
+    await queryInterface.addConstraint('product_collections', { fields: ['product_id', 'collection_id'], type: 'unique', name: 'product_collections_unique' });
 
     await queryInterface.createTable('product_views', {
       id: { type: Sequelize.UUID, defaultValue: Sequelize.literal('gen_random_uuid()'), primaryKey: true },
-      product_id: {
-        type: Sequelize.UUID,
-        allowNull: false,
-        references: { model: 'products', key: 'id' },
-        onDelete: 'CASCADE',
-        onUpdate: 'CASCADE',
-      },
+      product_id: { type: Sequelize.UUID, allowNull: false, references: { model: 'products', key: 'id' }, onDelete: 'CASCADE', onUpdate: 'CASCADE' },
       customer_id: { type: Sequelize.UUID, references: { model: 'users', key: 'id' }, onDelete: 'SET NULL' },
       session_id: { type: Sequelize.STRING(64) },
       viewed_at: { type: Sequelize.DATE, allowNull: false, defaultValue: Sequelize.fn('NOW') },

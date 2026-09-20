@@ -6,16 +6,8 @@ const db = require('../../models');
 const variantInclude = { model: db.ProductVariant, as: 'variants', required: false };
 const imageInclude = { model: db.ProductImage, as: 'images', required: false };
 const categoryInclude = { model: db.Category, as: 'category', attributes: ['id', 'name', 'slug'], required: false };
-const collectionInclude = {
-  model: db.Collection,
-  as: 'collections',
-  attributes: ['id', 'name', 'slug'],
-  through: { attributes: [] },
-  required: false,
-};
+const collectionInclude = { model: db.Collection, as: 'collections', attributes: ['id', 'name', 'slug'], through: { attributes: [] }, required: false };
 
-// Whitelisted sort orders, expressed in real column names so nothing user-supplied
-// ever reaches the ORDER BY clause.
 const SORTS = {
   newest: ['"Product"."published_at" DESC NULLS LAST', '"Product"."created_at" DESC'],
   oldest: ['"Product"."created_at" ASC'],
@@ -27,11 +19,6 @@ const SORTS = {
 
 const orderFor = (sort) => (SORTS[sort] || SORTS.newest).map((clause) => literal(clause));
 
-/**
- * Translates validated query filters into a Sequelize where clause.
- * Search uses trigram similarity on name plus a full-text match on
- * name/description/tags, so both typos and phrase queries work.
- */
 function buildWhere(filters = {}, { publicOnly = true } = {}) {
   const where = {};
   const and = [];
@@ -56,9 +43,7 @@ function buildWhere(filters = {}, { publicOnly = true } = {}) {
     and.push({
       [Op.or]: [
         literal(`similarity("Product"."name", ${db.sequelize.escape(term)}) > 0.2`),
-        literal(
-          `to_tsvector('simple', coalesce("Product"."name",'') || ' ' || coalesce("Product"."description",'') || ' ' || array_to_string("Product"."tags", ' ')) @@ plainto_tsquery('simple', ${db.sequelize.escape(term)})`
-        ),
+        literal(`to_tsvector('simple', coalesce("Product"."name",'') || ' ' || coalesce("Product"."description",'') || ' ' || array_to_string("Product"."tags", ' ')) @@ plainto_tsquery('simple', ${db.sequelize.escape(term)})`),
       ],
     });
   }
@@ -67,7 +52,6 @@ function buildWhere(filters = {}, { publicOnly = true } = {}) {
   return where;
 }
 
-// Size/colour live on variants, so those filters become an inner join.
 function variantFilter(filters = {}) {
   const variantWhere = {};
   if (filters.size) variantWhere.size = filters.size;
@@ -84,49 +68,25 @@ const search = async ({ filters = {}, page, limit, offset, sort = 'newest', publ
   const { rows, count } = await db.Product.findAndCountAll({
     where: buildWhere(filters, { publicOnly }),
     include: [variantFilter(filters), imageInclude, categoryInclude],
-    order,
-    limit,
-    offset,
-    distinct: true,
-    subQuery: false,
+    order, limit, offset, distinct: true, subQuery: false,
   });
   return { rows, count, page, limit };
 };
 
 const findById = (id, { publicOnly = false } = {}) =>
-  db.Product.findOne({
-    where: { id, ...(publicOnly ? { status: 'ACTIVE' } : {}) },
-    include: [variantInclude, imageInclude, categoryInclude, collectionInclude],
-  });
+  db.Product.findOne({ where: { id, ...(publicOnly ? { status: 'ACTIVE' } : {}) }, include: [variantInclude, imageInclude, categoryInclude, collectionInclude] });
 
 const findBySlug = (slug, { publicOnly = true } = {}) =>
-  db.Product.findOne({
-    where: { slug, ...(publicOnly ? { status: 'ACTIVE' } : {}) },
-    include: [variantInclude, imageInclude, categoryInclude, collectionInclude],
-  });
+  db.Product.findOne({ where: { slug, ...(publicOnly ? { status: 'ACTIVE' } : {}) }, include: [variantInclude, imageInclude, categoryInclude, collectionInclude] });
 
 const slugExists = async (slug, ignoreId) =>
-  Boolean(
-    await db.Product.findOne({
-      where: { slug, ...(ignoreId ? { id: { [Op.ne]: ignoreId } } : {}) },
-      paranoid: false,
-      attributes: ['id'],
-    })
-  );
+  Boolean(await db.Product.findOne({ where: { slug, ...(ignoreId ? { id: { [Op.ne]: ignoreId } } : {}) }, paranoid: false, attributes: ['id'] }));
 
 const skuExists = async (sku, ignoreId) =>
-  Boolean(
-    await db.Product.findOne({ where: { sku, ...(ignoreId ? { id: { [Op.ne]: ignoreId } } : {}) }, paranoid: false, attributes: ['id'] })
-  );
+  Boolean(await db.Product.findOne({ where: { sku, ...(ignoreId ? { id: { [Op.ne]: ignoreId } } : {}) }, paranoid: false, attributes: ['id'] }));
 
 const variantSkuExists = async (sku, ignoreId) =>
-  Boolean(
-    await db.ProductVariant.findOne({
-      where: { sku, ...(ignoreId ? { id: { [Op.ne]: ignoreId } } : {}) },
-      paranoid: false,
-      attributes: ['id'],
-    })
-  );
+  Boolean(await db.ProductVariant.findOne({ where: { sku, ...(ignoreId ? { id: { [Op.ne]: ignoreId } } : {}) }, paranoid: false, attributes: ['id'] }));
 
 const create = (payload, transaction) => db.Product.create(payload, { transaction });
 const update = (product, fields, transaction) => product.update(fields, { transaction });
@@ -140,75 +100,43 @@ const updateVariant = (variant, fields, transaction) => variant.update(fields, {
 const destroyVariant = (variant, transaction) => variant.destroy({ transaction });
 const createImages = (rows, transaction) => db.ProductImage.bulkCreate(rows, { transaction });
 
-const newArrivals = (limit) =>
-  db.Product.findAll({
-    where: { status: 'ACTIVE' },
-    include: [imageInclude, variantInclude],
-    order: orderFor('newest'),
-    limit,
-  });
+const newArrivals = (limit) => db.Product.findAll({ where: { status: 'ACTIVE' }, include: [imageInclude, variantInclude], order: orderFor('newest'), limit });
 
-const bestSellers = (limit) =>
-  db.Product.findAll({
-    where: { status: 'ACTIVE', salesCount: { [Op.gt]: 0 } },
-    include: [imageInclude, variantInclude],
-    order: [['salesCount', 'DESC']],
-    limit,
-  });
+const bestSellers = (limit) => db.Product.findAll({ where: { status: 'ACTIVE', salesCount: { [Op.gt]: 0 } }, include: [imageInclude, variantInclude], order: [['salesCount', 'DESC']], limit });
 
-/**
- * Trending = most viewed in a recent window, which is a behaviour signal rather
- * than an all-time counter. This query is the seam a recommendation engine or a
- * materialised view replaces later; nothing outside the repository knows the shape.
- */
 const trending = async (limit, sinceDays = 7) => {
   const since = new Date(Date.now() - sinceDays * 86400000);
   const rows = await db.ProductView.findAll({
     attributes: ['productId', [fn('COUNT', col('product_id')), 'views']],
-    where: { viewedAt: { [Op.gte]: since } },
-    group: ['product_id'],
-    order: [[literal('views'), 'DESC']],
-    limit,
-    raw: true,
+    where: { viewedAt: { [Op.gte]: since } }, group: ['product_id'], order: [[literal('views'), 'DESC']], limit, raw: true,
   });
   if (!rows.length) return bestSellers(limit);
 
   const ids = rows.map((r) => r.productId);
-  const products = await db.Product.findAll({
-    where: { id: { [Op.in]: ids }, status: 'ACTIVE' },
-    include: [imageInclude, variantInclude],
-  });
+  const products = await db.Product.findAll({ where: { id: { [Op.in]: ids }, status: 'ACTIVE' }, include: [imageInclude, variantInclude] });
   return ids.map((id) => products.find((p) => p.id === id)).filter(Boolean);
 };
 
-// Same category first, then shared tags; cheap now, swappable for embeddings later.
 const related = (product, limit) =>
   db.Product.findAll({
     where: {
-      id: { [Op.ne]: product.id },
-      status: 'ACTIVE',
+      id: { [Op.ne]: product.id }, status: 'ACTIVE',
       [Op.or]: [
         ...(product.categoryId ? [{ categoryId: product.categoryId }] : []),
         ...(product.tags && product.tags.length ? [{ tags: { [Op.overlap]: product.tags } }] : []),
       ],
     },
-    include: [imageInclude],
-    order: [['salesCount', 'DESC']],
-    limit,
+    include: [imageInclude], order: [['salesCount', 'DESC']], limit,
   });
 
 const recordView = (payload) => db.ProductView.create(payload);
-
 const incrementViews = (productId) => db.Product.increment({ viewsCount: 1 }, { where: { id: productId } });
+const incrementSales = (productId, qty, transaction) => db.Product.increment({ salesCount: qty }, { where: { id: productId }, transaction });
 
 const recentlyViewed = async ({ customerId, sessionId }, limit) => {
   const rows = await db.ProductView.findAll({
     attributes: ['productId', [fn('MAX', col('viewed_at')), 'lastViewedAt']],
-    where: customerId ? { customerId } : { sessionId },
-    group: ['product_id'],
-    order: [[literal('"lastViewedAt"'), 'DESC']],
-    limit,
-    raw: true,
+    where: customerId ? { customerId } : { sessionId }, group: ['product_id'], order: [[literal('"lastViewedAt"'), 'DESC']], limit, raw: true,
   });
   if (!rows.length) return [];
   const ids = rows.map((r) => r.productId);
@@ -221,11 +149,7 @@ const facets = async (filters = {}) => {
     db.ProductVariant.findAll({ attributes: [[fn('DISTINCT', col('size')), 'size']], raw: true }),
     db.ProductVariant.findAll({ attributes: [[fn('DISTINCT', col('color')), 'color']], raw: true }),
   ]);
-  const priceRange = await db.Product.findOne({
-    attributes: [[fn('MIN', col('price')), 'min'], [fn('MAX', col('price')), 'max']],
-    where: { status: 'ACTIVE' },
-    raw: true,
-  });
+  const priceRange = await db.Product.findOne({ attributes: [[fn('MIN', col('price')), 'min'], [fn('MAX', col('price')), 'max']], where: { status: 'ACTIVE' }, raw: true });
   return {
     sizes: sizes.map((s) => s.size).filter(Boolean),
     colors: colors.map((c) => c.color).filter(Boolean),
@@ -234,32 +158,11 @@ const facets = async (filters = {}) => {
 };
 
 const transaction = (fn2) => db.sequelize.transaction(fn2);
+const findVariantById = (id) => db.ProductVariant.findByPk(id, { include: [{ model: db.Product, as: 'product' }] });
 
 module.exports = {
-  search,
-  findById,
-  findBySlug,
-  slugExists,
-  skuExists,
-  variantSkuExists,
-  create,
-  update,
-  destroy,
-  setCollections,
-  findCollectionsByIds,
-  createVariant,
-  findVariant,
-  updateVariant,
-  destroyVariant,
-  createImages,
-  newArrivals,
-  bestSellers,
-  trending,
-  related,
-  recordView,
-  incrementViews,
-  recentlyViewed,
-  facets,
-  buildWhere,
-  transaction,
+  search, findById, findBySlug, slugExists, skuExists, variantSkuExists, create, update, destroy, setCollections,
+  findCollectionsByIds, createVariant, findVariant, findVariantById, updateVariant, destroyVariant, createImages,
+  newArrivals, bestSellers, trending, related, recordView, incrementViews, incrementSales, recentlyViewed, facets,
+  buildWhere, transaction,
 };

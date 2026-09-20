@@ -12,18 +12,13 @@ const Joi = require('joi');
 describe('Error handling and validation', () => {
   it('returns a structured 404 for unknown routes', async () => {
     const res = await request(app).get('/api/v1/does-not-exist');
-
     expect(res.status).toBe(404);
     expect(res.body.success).toBe(false);
     expect(res.body.error.code).toBe('NOT_FOUND');
   });
 
   it('rejects malformed JSON bodies with 400', async () => {
-    const res = await request(app)
-      .post('/api/v1/health/live')
-      .set('Content-Type', 'application/json')
-      .send('{"broken":');
-
+    const res = await request(app).post('/api/v1/health/live').set('Content-Type', 'application/json').send('{"broken":');
     expect([400, 404]).toContain(res.status);
     expect(res.body.success).toBe(false);
   });
@@ -32,11 +27,7 @@ describe('Error handling and validation', () => {
     const testApp = express();
     testApp.use(requestId);
     testApp.use(express.json());
-    testApp.post(
-      '/t',
-      validate({ body: Joi.object({ email: Joi.string().email().required(), age: Joi.number().min(18).required() }) }),
-      (req, res) => res.json({ success: true, data: req.body })
-    );
+    testApp.post('/t', validate({ body: Joi.object({ email: Joi.string().email().required(), age: Joi.number().min(18).required() }) }), (req, res) => res.json({ success: true, data: req.body }));
     testApp.use(errorHandler);
 
     const bad = await request(testApp).post('/t').send({ email: 'nope', age: 12 });

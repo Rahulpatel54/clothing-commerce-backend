@@ -19,7 +19,5 @@ module.exports = {
     await queryInterface.addIndex('audit_logs', ['actor_user_id'], { name: 'audit_logs_actor_idx' });
     await queryInterface.addIndex('audit_logs', ['created_at'], { name: 'audit_logs_created_at_idx' });
   },
-  async down(queryInterface) {
-    await queryInterface.dropTable('audit_logs');
-  },
+  async down(queryInterface) { await queryInterface.dropTable('audit_logs'); },
 };

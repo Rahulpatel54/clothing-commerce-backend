@@ -14,11 +14,6 @@ function scrub(state) {
   return plain;
 }
 
-/**
- * Writes one audit row for a privileged mutation.
- * Pass the transaction when the caller has one, so the audit row lives or dies
- * with the change it describes. Failure to audit never breaks the request.
- */
 async function record(req, { action, entityType, entityId, before, after, transaction } = {}) {
   try {
     return await db.AuditLog.create(
