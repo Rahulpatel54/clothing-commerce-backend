@@ -18,4 +18,4 @@ EXPOSE 4000
 
 # Runs migrations then boots the API; the compose healthcheck below gives the DB
 # time to accept connections before this loop stops retrying.
-CMD ["sh", "-c", "until npx sequelize-cli db:migrate; do echo 'waiting for database...'; sleep 2; done; node src/server.js"]
+CMD ["node", "src/server.js"]

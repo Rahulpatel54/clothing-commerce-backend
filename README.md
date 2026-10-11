@@ -6,6 +6,14 @@ users/customers, catalog + discovery, inventory, cart, promotions + checkout,
 orders, payments, and the loyalty wallet + referral program — plus a customer
 wishlist feature.
 
+**New to this codebase? Read [`DEVELOPER_GUIDE.md`](./DEVELOPER_GUIDE.md) first** —
+it explains the folder structure, the request lifecycle, what every dependency
+is for, and gives a step-by-step recipe for adding a new module.
+
+Every route is now documented at `/docs` (Swagger UI). Each endpoint's
+`@openapi` block lives inside its controller function — see §4 of the
+developer guide for why, and for the pattern to copy when you add a route.
+
 ## What's new in this build (phases 7–12 + extras)
 
 | Area | Status |
@@ -33,7 +41,7 @@ docker compose up --build # postgres + redis + api, migrations run automatically
 ```
 
 - API: `http://localhost:4000/api/v1`
-- Docs: `http://localhost:4000/docs`
+- Docs: `http://localhost:4000/docs` (Swagger UI — click **Authorize** and paste an access token from `POST /auth/login` to try endpoints that need one)
 - Health: `GET /api/v1/health/ready`
 
 Without Docker:
@@ -60,6 +68,7 @@ Tests: create a `clothing_commerce_test` database, then `npm test`.
 - **`utils/idempotency.js`** is the shared guard for any POST that must not double-execute (checkout, payment webhooks): a completed request replays its stored response instead of re-running side effects.
 - **The order lifecycle lives in one place**: `src/modules/orders/order.transitions.js`. Every caller — the HTTP layer, the payment webhook, tests — goes through `canTransition()`/`order.service.transition()` rather than writing `status` directly.
 - **Snapshots, not references, for anything financial.** Order items freeze product name/SKU/price/cost at order time; cart items keep a `priceAtAdd` snapshot purely to flag drift, but totals are always recomputed from the live price.
+- **Swagger docs live in the controller, not the route file.** Every `@openapi` block sits as the first line inside its controller function; `docs/swagger.js` scans `*.controller.js` files, not `*.routes.js`. See `DEVELOPER_GUIDE.md` §4.
 
 ## Conventions carried over from phases 1–6
 

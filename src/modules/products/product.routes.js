@@ -10,6 +10,9 @@ const controller = require('./product.controller');
 
 const router = express.Router();
 
+// Swagger docs live inside each handler in product.controller.js. Order matters
+// here: static paths (/facets, /admin, /new-arrivals, ...) must be registered
+// before the catch-all /:slug route or Express would treat "facets" as a slug.
 router.get('/', validate(schema.search), controller.search);
 router.get('/facets', controller.facets);
 router.get('/new-arrivals', validate(schema.discovery), controller.newArrivals);

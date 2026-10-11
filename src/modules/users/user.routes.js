@@ -10,6 +10,7 @@ const controller = require('./user.controller');
 const router = express.Router();
 router.use(authenticate);
 
+// Swagger docs live inside each handler in user.controller.js.
 router.get('/', authorize('users:read'), validate(schema.list), controller.list);
 router.post('/', authorize('users:create'), validate(schema.create), controller.create);
 router.get('/:id', authorizeSelfOr('users:read'), validate(schema.byId), controller.get);

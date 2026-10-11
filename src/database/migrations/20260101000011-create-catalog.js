@@ -11,7 +11,7 @@ module.exports = {
     await queryInterface.createTable('categories', {
       id: { type: Sequelize.UUID, defaultValue: Sequelize.literal('gen_random_uuid()'), primaryKey: true },
       name: { type: Sequelize.STRING(120), allowNull: false },
-      slug: { type: Sequelize.STRING(180), allowNull: false, unique: true },
+      slug: { type: Sequelize.STRING(180), allowNull: false},
       description: { type: Sequelize.TEXT },
       parent_id: { type: Sequelize.UUID, references: { model: 'categories', key: 'id' }, onDelete: 'SET NULL' },
       image_url: { type: Sequelize.STRING(500) },
@@ -67,7 +67,29 @@ module.exports = {
     await queryInterface.addIndex('products', ['tags'], { using: 'gin', name: 'products_tags_gin' });
     await queryInterface.addConstraint('products', { fields: ['price'], type: 'check', name: 'products_price_non_negative', where: { price: { [Sequelize.Op.gte]: 0 } } });
     await queryInterface.sequelize.query('CREATE INDEX products_name_trgm ON products USING gin (name gin_trgm_ops);');
-    await queryInterface.sequelize.query("CREATE INDEX products_search_fts ON products USING gin (to_tsvector('simple', coalesce(name,'') || ' ' || coalesce(description,'') || ' ' || array_to_string(tags, ' ')));");
+await queryInterface.sequelize.query(`
+  CREATE INDEX products_search_fts
+  ON products
+  USING gin (
+    to_tsvector(
+      'simple',
+      coalesce(name, '') || ' ' || coalesce(description, '')
+    )
+  );
+`);
+    await queryInterface.sequelize.query(`
+    CREATE OR REPLACE FUNCTION public.immutable_varchar_array_to_string(
+      arr character varying[],
+      sep text
+    )
+    RETURNS text
+    LANGUAGE sql
+    IMMUTABLE
+    PARALLEL SAFE
+    AS $$
+      SELECT array_to_string(arr, sep);
+    $$;
+  `);
 
     await queryInterface.createTable('product_variants', {
       id: { type: Sequelize.UUID, defaultValue: Sequelize.literal('gen_random_uuid()'), primaryKey: true },
@@ -130,6 +152,10 @@ module.exports = {
     await queryInterface.dropTable('product_images');
     await queryInterface.dropTable('product_variants');
     await queryInterface.dropTable('products');
+    await queryInterface.sequelize.query(`
+    DROP FUNCTION IF EXISTS
+    public.immutable_varchar_array_to_string(character varying[], text);
+  `);
     await queryInterface.dropTable('collections');
     await queryInterface.dropTable('categories');
     await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_products_status";');

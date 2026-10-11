@@ -9,6 +9,8 @@ const controller = require('./auth.controller');
 
 const router = express.Router();
 
+// Swagger docs for every route below live inside the matching handler in
+// auth.controller.js — this file only wires path + middleware + handler.
 router.post('/register', authLimiter, validate(schema.register), controller.register);
 router.post('/login', authLimiter, validate(schema.login), controller.login);
 router.post('/refresh', validate(schema.refresh), controller.refresh);

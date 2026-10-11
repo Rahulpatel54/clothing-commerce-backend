@@ -11,7 +11,7 @@ const spec = swaggerJsdoc({
     info: {
       title: 'Clothing Commerce & Business Management API',
       version: require('../../package.json').version,
-      description: 'Commerce, operations and business management backend. Documentation is generated from JSDoc annotations on route files.',
+      description: 'Commerce, operations and business management backend. Documentation is generated from JSDoc annotations inside each controller handler.',
     },
     servers: [{ url: `http://localhost:${config.port}${config.apiPrefix}`, description: 'Local' }],
     components: {
@@ -31,17 +31,25 @@ const spec = swaggerJsdoc({
     tags: [
       { name: 'Health', description: 'Liveness and readiness probes' },
       { name: 'Auth', description: 'Registration, login, token rotation and password reset' },
+      { name: 'Users', description: 'Admin user management, roles and status' },
+      { name: 'Customers', description: 'Customer profiles, addresses and marketing preferences' },
+      { name: 'Catalog', description: 'Admin catalog management: products, variants, categories, collections' },
+      { name: 'Discovery', description: 'Public product search, filters and recommendations' },
+      { name: 'Wishlist', description: 'Customer wishlists' },
       { name: 'Inventory', description: 'Stock levels and movements' },
       { name: 'Cart', description: 'Guest and customer shopping carts' },
+      { name: 'Promotions', description: 'Coupons and the promotion rule engine' },
       { name: 'Checkout', description: 'Checkout and order placement' },
       { name: 'Orders', description: 'Order lifecycle' },
       { name: 'Payments', description: 'Payments and refunds' },
       { name: 'Loyalty', description: 'Wallet ledger' },
       { name: 'Referrals', description: 'Referral program' },
-      { name: 'Wishlist', description: 'Customer wishlists' },
     ],
   },
-  apis: [path.join(__dirname, '..', 'modules', '**', '*.routes.js')],
+  // Every @openapi block lives inside its controller function, right after the
+  // opening line of the handler — not in the route file. This is the single
+  // source of truth /docs is generated from; see DEVELOPER_GUIDE.md.
+  apis: [path.join(__dirname, '..', 'modules', '**', '*.controller.js')],
 });
 
 function mountSwagger(app) {

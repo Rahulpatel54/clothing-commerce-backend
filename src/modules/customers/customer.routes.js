@@ -21,7 +21,8 @@ router.post('/:id/addresses', validate(schema.addAddress), controller.addAddress
 router.patch('/:id/addresses/:addressId', validate(schema.updateAddress), controller.updateAddress);
 router.delete('/:id/addresses/:addressId', validate(schema.removeAddress), controller.removeAddress);
 
-// Wishlist is customer-scoped; nested under /customers/:id/wishlist.
+// Wishlist is customer-scoped; nested under /customers/:id/wishlist. Its own docs
+// live inside wishlist.controller.js.
 router.use('/:id/wishlist', wishlistRoutes);
 
 module.exports = router;

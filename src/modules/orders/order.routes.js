@@ -24,45 +24,8 @@ router.use(async (req, res, next) => {
   }
 });
 
-/**
- * @openapi
- * /orders:
- *   get:
- *     tags: [Orders]
- *     summary: List orders (own orders for customers, any order for staff with orders:read)
- *     security: [{ bearerAuth: [] }]
- *     responses:
- *       200: { description: Orders }
- */
 router.get('/', validate(schema.list), controller.list);
-
-/**
- * @openapi
- * /orders/{id}:
- *   get:
- *     tags: [Orders]
- *     summary: Get one order (owner or staff)
- *     security: [{ bearerAuth: [] }]
- *     parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
- *     responses:
- *       200: { description: Order }
- *       403: { $ref: '#/components/responses/Forbidden' }
- *       404: { $ref: '#/components/responses/NotFound' }
- */
 router.get('/:id', validate(schema.byId), controller.get);
-
-/**
- * @openapi
- * /orders/{id}/status:
- *   patch:
- *     tags: [Orders]
- *     summary: Transition an order's status through the fulfilment state machine (staff)
- *     security: [{ bearerAuth: [] }]
- *     parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
- *     responses:
- *       200: { description: Order status updated }
- *       409: { description: Invalid transition for the order's current status }
- */
 router.patch('/:id/status', authorize('orders:update'), validate(schema.transition), controller.transition);
 
 module.exports = router;

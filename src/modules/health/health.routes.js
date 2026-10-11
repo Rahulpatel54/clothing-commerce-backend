@@ -5,28 +5,9 @@ const controller = require('./health.controller');
 
 const router = express.Router();
 
-/**
- * @openapi
- * /health/live:
- *   get:
- *     tags: [Health]
- *     summary: Liveness probe
- *     responses:
- *       200:
- *         description: Service process is running
- */
+// Swagger docs for these routes live in health.controller.js, right inside each
+// handler — that's the single source of truth the /docs page is generated from.
 router.get('/live', controller.live);
-
-/**
- * @openapi
- * /health/ready:
- *   get:
- *     tags: [Health]
- *     summary: Readiness probe (checks database and optional dependencies)
- *     responses:
- *       200: { description: All dependencies reachable }
- *       503: { description: One or more dependencies are down }
- */
 router.get('/ready', controller.ready);
 
 module.exports = router;
