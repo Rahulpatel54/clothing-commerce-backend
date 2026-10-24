@@ -80,10 +80,10 @@ const validateAndReward = async (refereeUserId, { deliveredAt, fraudSignals } = 
     try {
       // eslint-disable-next-line global-require
       const walletService = require('../loyalty/wallet.service');
-      // eslint-disable-next-line global-require
-      const db = require('../../models');
-      const referral = await db.Referral.findByPk(signup.referralId, { transaction: t });
-      await walletService.credit({ customerId: referral.referrerCustomerId, type: 'REFERRAL_CREDIT', amount: REFERRAL_REWARD_AMOUNT, referenceType: 'REFERRAL', referenceId: referral.id }, t);
+      const referral = await repo.findById(signup.referralId, t);
+      if (referral) {
+        await walletService.credit({ customerId: referral.referrerCustomerId, type: 'REFERRAL_CREDIT', amount: REFERRAL_REWARD_AMOUNT, referenceType: 'REFERRAL', referenceId: referral.id }, t);
+      }
     } catch (err) { /* loyalty module optional in isolated tests */ }
 
     return { rewarded: true };

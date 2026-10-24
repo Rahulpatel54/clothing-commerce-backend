@@ -16,6 +16,8 @@ const paymentRoutes = require('./payments/payment.routes');
 const promotionRoutes = require('./promotions/promotion.routes');
 const walletRoutes = require('./loyalty/wallet.routes');
 const referralRoutes = require('./referrals/referral.routes');
+const reviewRoutes = require('./reviews/review.routes');
+const ugcRoutes = require('./ugc/ugc.routes');
 
 const router = express.Router();
 
@@ -36,6 +38,8 @@ const routes = [
   { path: '/promotions', router: promotionRoutes },
   { path: '/loyalty', router: walletRoutes },
   { path: '/referrals', router: referralRoutes },
+  { path: '/reviews', router: reviewRoutes },
+  { path: '/ugc', router: ugcRoutes },
 ];
 
 routes.forEach(({ path, router: moduleRouter }) => router.use(path, moduleRouter));

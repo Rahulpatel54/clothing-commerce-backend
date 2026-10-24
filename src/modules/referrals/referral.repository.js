@@ -3,6 +3,7 @@
 const db = require('../../models');
 
 const findByCode = (code, transaction) => db.Referral.findOne({ where: { code }, transaction });
+const findById = (id, transaction) => db.Referral.findByPk(id, { transaction });
 const findByReferrer = (referrerCustomerId) => db.Referral.findOne({ where: { referrerCustomerId } });
 const create = (payload, transaction) => db.Referral.create(payload, { transaction });
 
@@ -18,4 +19,4 @@ const codeExists = async (code) => Boolean(await db.Referral.findOne({ where: { 
 
 const transaction = (fn) => db.sequelize.transaction(fn);
 
-module.exports = { findByCode, findByReferrer, create, findEventsForReferee, findEventByStage, createEvent, codeExists, transaction };
+module.exports = { findByCode, findById, findByReferrer, create, findEventsForReferee, findEventByStage, createEvent, codeExists, transaction };

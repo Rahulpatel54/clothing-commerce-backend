@@ -15,7 +15,14 @@ const spec = swaggerJsdoc({
     },
     servers: [{ url: `http://localhost:${config.port}${config.apiPrefix}`, description: 'Local' }],
     components: {
-      securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' } },
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+          description: 'Paste your JWT access token here (quotes and "Bearer " prefix are stripped automatically).',
+        },
+      },
       schemas: {
         SuccessResponse: { type: 'object', properties: { success: { type: 'boolean', example: true }, message: { type: 'string', example: 'OK' }, data: { nullable: true }, requestId: { type: 'string', format: 'uuid' } } },
         ErrorResponse: { type: 'object', properties: { success: { type: 'boolean', example: false }, error: { type: 'object', properties: { code: { type: 'string', example: 'VALIDATION_ERROR' }, message: { type: 'string' }, details: { type: 'array', items: { type: 'object' } } } }, requestId: { type: 'string', format: 'uuid' } } },
@@ -44,6 +51,8 @@ const spec = swaggerJsdoc({
       { name: 'Payments', description: 'Payments and refunds' },
       { name: 'Loyalty', description: 'Wallet ledger' },
       { name: 'Referrals', description: 'Referral program' },
+      { name: 'Reviews', description: 'Product reviews, ratings and moderation' },
+      { name: 'UGC', description: 'User-generated content submissions and rewards' },
     ],
   },
   // Every @openapi block lives inside its controller function, right after the
@@ -54,7 +63,17 @@ const spec = swaggerJsdoc({
 
 function mountSwagger(app) {
   app.get('/docs.json', (req, res) => res.json(spec));
-  app.use('/docs', swaggerUi.serve, swaggerUi.setup(spec, { customSiteTitle: 'Commerce API Docs' }));
+  app.use(
+    '/docs',
+    swaggerUi.serve,
+    swaggerUi.setup(spec, {
+      customSiteTitle: 'Commerce API Docs',
+      swaggerOptions: {
+        persistAuthorization: true,
+        displayRequestDuration: true,
+      },
+    })
+  );
 }
 
 module.exports = { spec, mountSwagger };

@@ -64,4 +64,29 @@ describe('Auth routes', () => {
     expect(res.body.data).toMatchObject({ id: 'user-1', roles: ['customer'], permissions: ['orders:read'] });
     expect(res.body.data.passwordHash).toBeUndefined();
   });
+
+  it('resiliently handles accidental quotes and duplicate Bearer prefix from Swagger UI', async () => {
+    const token = tokens.signAccessToken({ id: 'user-1', email: 'a@b.com', roles: ['customer'], permissions: [] });
+    repo.findUserById.mockResolvedValue({ id: 'user-1', email: 'a@b.com', status: 'ACTIVE', mfaEnabled: false });
+    repo.findUserWithRoles.mockResolvedValue({ roles: [{ name: 'customer', permissions: [] }] });
+
+    // With duplicate Bearer prefix (when user enters "Bearer <token>" in Swagger Authorize dialog)
+    const res1 = await request(app).get('/api/v1/auth/me').set('Authorization', `Bearer Bearer ${token}`);
+    expect(res1.status).toBe(200);
+
+    // With surrounding quotes (when user copies "token" from Swagger response JSON)
+    const res2 = await request(app).get('/api/v1/auth/me').set('Authorization', `Bearer "${token}"`);
+    expect(res2.status).toBe(200);
+
+    // With both duplicate Bearer and quotes
+    const res3 = await request(app).get('/api/v1/auth/me').set('Authorization', `Bearer Bearer "${token}"`);
+    expect(res3.status).toBe(200);
+
+    // When user accidentally copies trailing quote, comma, and refreshToken field from Swagger JSON
+    const res4 = await request(app).get('/api/v1/auth/me').set(
+      'Authorization',
+      `Bearer ${token}",       "refreshToken": "98ae7f5a45e84d1f2ef4886cce9d3cf5fd2f4750c308d2b1ee2af68b678a835d7c9072721bc82596c5ecef07ca333dae`
+    );
+    expect(res4.status).toBe(200);
+  });
 });

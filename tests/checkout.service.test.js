@@ -34,7 +34,7 @@ beforeEach(() => {
   promotionService.evaluate.mockResolvedValue({ discount: 0, breakdown: [], coupon: null });
   inventoryService.reserve.mockResolvedValue({});
   orderService.createFromCheckout.mockResolvedValue({ id: 'order-1', toJSON: () => ({ id: 'order-1' }) });
-  orderService.present.mockImplementation((o) => o);
+  orderService.present.mockImplementation((o) => (o && typeof o.toJSON === 'function' ? o.toJSON() : o));
   cartRepo.update.mockResolvedValue(undefined);
 });
 

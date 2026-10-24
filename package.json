@@ -4,13 +4,10 @@
   "private": true,
   "description": "Commerce + business management backend for a clothing brand (modular monolith).",
   "main": "src/server.js",
-  "engines": {
-    "node": ">=20"
-  },
+  "engines": { "node": ">=20" },
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "docker:sh": "docker compose exec api sh",
     "db:migrate": "sequelize-cli db:migrate",
     "db:migrate:undo": "sequelize-cli db:migrate:undo",
     "db:seed": "sequelize-cli db:seed:all",
@@ -44,7 +41,7 @@
     "cross-env": "^7.0.3",
     "eslint": "^8.57.0",
     "jest": "^29.7.0",
-    "sequelize-cli": "^6.6.5",
+    "sequelize-cli": "^6.6.2",
     "supertest": "^7.0.0"
   }
 }

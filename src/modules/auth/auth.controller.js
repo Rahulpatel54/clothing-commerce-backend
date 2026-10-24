@@ -43,6 +43,7 @@ const register = catchAsync(async (req, res) => {
    *       422: { $ref: '#/components/responses/ValidationError' }
    */
   const result = await service.register(req.body, context(req));
+  if (result.tokens && result.tokens.accessToken) res.set('x-access-token', result.tokens.accessToken);
   return success(res, { data: result, message: 'Account created', statusCode: 201 });
 });
 
@@ -73,6 +74,7 @@ const login = catchAsync(async (req, res) => {
    *       423: { description: Account locked after repeated failed attempts }
    */
   const result = await service.login(req.body, context(req));
+  if (result.tokens && result.tokens.accessToken) res.set('x-access-token', result.tokens.accessToken);
   return success(res, { data: result, message: result.mfaRequired ? 'MFA required' : 'Logged in' });
 });
 
@@ -97,6 +99,7 @@ const refresh = catchAsync(async (req, res) => {
    *       401: { $ref: '#/components/responses/Unauthorized' }
    */
   const result = await service.refresh(req.body, context(req));
+  if (result.tokens && result.tokens.accessToken) res.set('x-access-token', result.tokens.accessToken);
   return success(res, { data: result, message: 'Token refreshed' });
 });
 

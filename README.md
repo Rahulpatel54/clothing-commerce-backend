@@ -1,10 +1,10 @@
 # Clothing Commerce & Business Management Backend
 
 Modular monolith on Node.js + Express + PostgreSQL + Sequelize.
-This build covers **phases 1–12** of the 25-phase plan: project setup, auth, RBAC,
+This build covers **phases 1–13** of the 25-phase plan: project setup, auth, RBAC,
 users/customers, catalog + discovery, inventory, cart, promotions + checkout,
-orders, payments, and the loyalty wallet + referral program — plus a customer
-wishlist feature.
+orders, payments, loyalty wallet + referral program, wishlist, and reviews +
+user-generated content (UGC).
 
 **New to this codebase? Read [`DEVELOPER_GUIDE.md`](./DEVELOPER_GUIDE.md) first** —
 it explains the folder structure, the request lifecycle, what every dependency
@@ -27,6 +27,8 @@ developer guide for why, and for the pattern to copy when you add a route.
 | **Loyalty wallet** (`wallets`, `wallet_transactions`) — append-only ledger, balance always derived (never stored), per-transaction expiry, balance can never go negative (row-locked debit) | Done |
 | **Referrals** (`referrals`, `referral_events`) — link → signup → purchase → payment → delivery → return-window expiry → validated → reward, pluggable multi-signal fraud evaluator (`src/modules/referrals/fraud.evaluator.js`) | Done |
 | **Wishlist** (`wishlist_items`) — nested under `/customers/:id/wishlist`, idempotent add, owner-or-staff scoped | Done |
+| **Reviews** (`reviews`, `review_images`) — delivered & non-returned purchase verification, one review per customer per variant, rating (1–5), fit and quality feedback, helpful voting, admin moderation | Done |
+| **UGC** (`ugc_submissions`, `ugc_rewards`) — customer submissions, order verification, admin verification, automatic reward issuance through loyalty wallet ledger (`UGC_CREDIT`) | Done |
 | **Docker** — an `api` service alongside `postgres` and `redis` in `docker-compose.yml`, with its own `Dockerfile` (multi-stage, non-root, runs migrations then boots) | Done |
 
 Everything from phases 1–6 (config, logging, error handling, auth, RBAC, users,
@@ -43,6 +45,46 @@ docker compose up --build # postgres + redis + api, migrations run automatically
 - API: `http://localhost:4000/api/v1`
 - Docs: `http://localhost:4000/docs` (Swagger UI — click **Authorize** and paste an access token from `POST /auth/login` to try endpoints that need one)
 - Health: `GET /api/v1/health/ready`
+
+### Container networking
+
+All three services (`postgres`, `redis`, `api`) sit on one explicit, named
+Docker network: `commerce-network` (a bridge network declared at the bottom
+of `docker-compose.yml`, not Compose's implicit default network). Each
+service also has a fixed `container_name` — `commerce-postgres`,
+`commerce-redis`, `commerce-api`.
+
+Inside that network, Docker's embedded DNS resolves every container by its
+name, so containers reach each other without knowing an IP:
+
+- the `api` container connects to Postgres at `postgres:5432` and to Redis at
+  `redis:6379` (see `DB_HOST`/`REDIS_URL` in the `api` service's
+  `environment:` block) — `postgres` and `redis` here are the *container/
+  service names*, not `localhost`
+- from inside any container on the network you can `ping commerce-postgres`
+  or `curl commerce-api:4000/api/v1/health/live` and it resolves
+
+This only works for containers attached to `commerce-network`. Your host
+machine is not on that network, so from your own terminal you still use the
+published ports (`localhost:5432`, `localhost:6379`, `localhost:4000`) — the
+`ports:` lines in `docker-compose.yml`.
+
+**Adding another container that needs to talk to this stack** (a worker, an
+admin UI like pgAdmin, a second API, ...): either add it as a service in this
+same `docker-compose.yml` (it joins `commerce-network` automatically if you
+list it under `networks:` the same way `api` does), or, if it's started
+separately, attach it to the already-running network explicitly:
+
+```bash
+docker network connect commerce-network <your-container-name>
+# then, from inside that container:
+curl http://commerce-api:4000/api/v1/health/live
+```
+
+Check what's on the network at any time with:
+```bash
+docker network inspect commerce-network
+```
 
 Without Docker:
 ```bash
@@ -89,8 +131,8 @@ routes → controller → validation → service → repository → model → po
 - The payments provider is `mock` by default (`PAYMENTS_PROVIDER=mock`); it never calls out to the network and signs webhooks with `PAYMENTS_WEBHOOK_SECRET` using HMAC-SHA256, exactly like a real gateway would.
 - `src/modules/referrals/fraud.evaluator.js` and `src/modules/auth/mfa/mfa.provider.js` follow the same pluggable-seam pattern: business code calls one function and never branches on the implementation.
 
-## Remaining phases (13–25)
+## Remaining phases (14–25)
 
-Reviews/UGC, expenses/finance, marketing/analytics, notifications + background
+Expenses/finance, marketing/analytics, notifications + background
 jobs, security hardening/encryption, and test/documentation completion — see
 `PROMPT_CHAIN.md` for the prompt to run for each.

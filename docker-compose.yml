@@ -1,36 +1,51 @@
+# All three services share one explicit, named bridge network (commerce-network)
+# instead of relying on Compose's implicit default network. Within that network,
+# Docker's embedded DNS resolves each service by its container_name (or service
+# name — both work), so containers talk to each other as e.g. postgres:5432 or
+# redis:6379 rather than by IP. Host-machine access still goes through the
+# published ports below (localhost:5432, localhost:6379, localhost:4000).
 services:
   postgres:
     image: postgres:16-alpine
+    container_name: commerce-postgres
     environment:
       POSTGRES_DB: ${DB_NAME:-clothing_commerce}
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
-    ports: ['5433:5432']
+    ports: ['5432:5432']
     volumes: ['pgdata:/var/lib/postgresql/data']
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-clothing_commerce}']
       interval: 5s
       timeout: 5s
       retries: 10
+    networks:
+      - commerce-network
 
   redis:
     image: redis:7-alpine
+    container_name: commerce-redis
     ports: ['6379:6379']
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
       interval: 5s
       timeout: 5s
       retries: 10
+    networks:
+      - commerce-network
 
   api:
     build:
       context: .
       dockerfile: Dockerfile
+    container_name: commerce-api
     ports: ['${PORT:-4000}:4000']
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 4000
       API_PREFIX: ${API_PREFIX:-/api/v1}
+      # Resolved via Docker's embedded DNS on commerce-network — "postgres" and
+      # "redis" here are the other containers' names, not localhost.
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: ${DB_NAME:-clothing_commerce}
@@ -54,6 +69,13 @@ services:
     volumes:
       - .:/app
       - /app/node_modules
+    networks:
+      - commerce-network
 
 volumes:
   pgdata:
+
+networks:
+  commerce-network:
+    name: commerce-network
+    driver: bridge

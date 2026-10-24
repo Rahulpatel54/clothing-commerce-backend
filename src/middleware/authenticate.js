@@ -5,10 +5,29 @@ const tokens = require('../modules/auth/token.service');
 const repo = require('../modules/auth/auth.repository');
 
 function extract(req) {
-  const header = req.headers.authorization || '';
-  const [scheme, value] = header.split(' ');
-  if (!value || scheme.toLowerCase() !== 'bearer') return null;
-  return value;
+  const header = req.headers.authorization;
+  if (!header || typeof header !== 'string') return null;
+
+  const trimmed = header.trim();
+  if (!trimmed || /^basic\s+/i.test(trimmed)) return null;
+
+  // Extract the JWT token (eyJ...) if present in the header.
+  // This cleanly handles cases where copying from Swagger UI accidentally captures
+  // duplicate 'Bearer', quotes, or trailing JSON fields like:
+  // 'eyJ...TYw",       "refreshToken": "..."'
+  const jwtMatch = trimmed.match(/eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_-]*)?/);
+  if (jwtMatch) {
+    return jwtMatch[0];
+  }
+
+  // Fallback for non-standard/mock tokens in unit tests
+  let token = trimmed;
+  while (/^bearer\s+/i.test(token)) {
+    token = token.replace(/^bearer\s+/i, '').trim();
+  }
+  token = token.replace(/^["'`\s]+|["'`\s;,]+$/g, '').trim();
+
+  return token || null;
 }
 
 const authenticate = async (req, res, next) => {

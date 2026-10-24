@@ -15,6 +15,7 @@ function event(stage, overrides = {}) {
 beforeEach(() => {
   repo.transaction.mockImplementation(async (fn) => fn('tx'));
   repo.createEvent.mockResolvedValue({});
+  repo.findById.mockResolvedValue({ id: 'ref-1', referrerCustomerId: 'cust-1' });
 });
 
 describe('recordSignup', () => {
