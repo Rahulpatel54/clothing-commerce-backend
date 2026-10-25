@@ -1,11 +1,12 @@
 'use strict';
 
+const crypto = require('crypto');
 const ApiError = require('../../utils/ApiError');
 const audit = require('../audit/audit.service');
 const repo = require('./order.repository');
 const { canTransition } = require('./order.transitions');
 
-const orderNumber = () => `ORD${Date.now().toString(36).toUpperCase()}${Math.floor(Math.random() * 900 + 100)}`;
+const orderNumber = () => (`ORD${Date.now().toString(36).toUpperCase()}${crypto.randomBytes(4).toString('hex').toUpperCase()}`).slice(0, 20);
 
 function present(order) {
   if (!order) return null;
@@ -54,6 +55,29 @@ async function reverseStock(order, mode, actorUserId) {
     } else {
       // eslint-disable-next-line no-await-in-loop
       await inventoryService.restock({ variantId: item.variantId, quantity: item.quantity, referenceType: 'ORDER', referenceId: order.id, actorUserId, note: `Order ${order.orderNumber} ${mode}` });
+    }
+  }
+}
+
+async function refundWalletOnCancel(order, transaction) {
+  if (Number(order.walletAmount) > 0) {
+    try {
+      // eslint-disable-next-line global-require
+      const walletService = require('../loyalty/wallet.service');
+      await walletService.credit(
+        {
+          customerId: order.customerId,
+          type: 'COMPENSATION_CREDIT',
+          amount: Number(order.walletAmount),
+          referenceType: 'ORDER_CANCELLATION',
+          referenceId: order.id,
+          note: `Restored wallet credit for cancelled order ${order.orderNumber}`,
+        },
+        transaction
+      );
+    } catch (err) {
+      const logger = require('../../config/logger');
+      logger.error({ err, orderId: order.id }, 'Failed to refund wallet credit on order cancellation');
     }
   }
 }
@@ -125,6 +149,7 @@ const transition = async (req, orderId, toStatus, reason) => {
       // that point already left physical stock, so cancelling restocks instead.
       await reverseStock(fullOrder, fromStatus === 'PENDING' ? 'release' : 'restock', req.user && req.user.id);
       if (fromStatus !== 'PENDING') await applyCustomerStats(fullOrder, -1);
+      await refundWalletOnCancel(fullOrder, t);
       await notifyReferral(fullOrder, 'recordCancellation');
     } else if (toStatus === 'RETURNED') {
       await reverseStock(fullOrder, 'restock', req.user && req.user.id);

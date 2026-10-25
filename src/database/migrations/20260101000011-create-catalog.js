@@ -67,7 +67,8 @@ module.exports = {
     await queryInterface.addIndex('products', ['tags'], { using: 'gin', name: 'products_tags_gin' });
     await queryInterface.addConstraint('products', { fields: ['price'], type: 'check', name: 'products_price_non_negative', where: { price: { [Sequelize.Op.gte]: 0 } } });
     await queryInterface.sequelize.query('CREATE INDEX products_name_trgm ON products USING gin (name gin_trgm_ops);');
-    await queryInterface.sequelize.query("CREATE INDEX products_search_fts ON products USING gin (to_tsvector('simple', coalesce(name,'') || ' ' || coalesce(description,'') || ' ' || array_to_string(tags, ' ')));");
+    await queryInterface.sequelize.query("CREATE OR REPLACE FUNCTION immutable_array_to_string(text[], text) RETURNS text LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$ SELECT array_to_string($1, $2) $$;");
+    await queryInterface.sequelize.query("CREATE INDEX products_search_fts ON products USING gin (to_tsvector('simple', coalesce(name,'') || ' ' || coalesce(description,'') || ' ' || immutable_array_to_string(tags, ' ')));");
 
     await queryInterface.createTable('product_variants', {
       id: { type: Sequelize.UUID, defaultValue: Sequelize.literal('gen_random_uuid()'), primaryKey: true },

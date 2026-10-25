@@ -2,7 +2,7 @@
 
 const db = require('../../models');
 
-const customerInclude = { model: db.Customer, as: 'customer', attributes: ['id', 'firstName', 'lastName'] };
+const customerInclude = { model: db.Customer, as: 'customer', attributes: ['id', 'userId'], include: [{ model: db.User, as: 'user', attributes: ['id', 'firstName', 'lastName', 'email'] }] };
 const variantInclude = { model: db.ProductVariant, as: 'variant', attributes: ['id', 'sku', 'size', 'color'] };
 const imageInclude = { model: db.ReviewImage, as: 'images', attributes: ['id', 'url', 'altText', 'displayOrder'], order: [['displayOrder', 'ASC']] };
 

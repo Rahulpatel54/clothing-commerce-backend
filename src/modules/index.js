@@ -18,6 +18,11 @@ const walletRoutes = require('./loyalty/wallet.routes');
 const referralRoutes = require('./referrals/referral.routes');
 const reviewRoutes = require('./reviews/review.routes');
 const ugcRoutes = require('./ugc/ugc.routes');
+const expenseRoutes = require('./expenses/expense.routes');
+const financeRoutes = require('./finance/finance.routes');
+const marketingRoutes = require('./marketing/marketing.routes');
+const analyticsRoutes = require('./analytics/analytics.routes');
+const notificationRoutes = require('./notifications/notification.routes');
 
 const router = express.Router();
 
@@ -40,6 +45,11 @@ const routes = [
   { path: '/referrals', router: referralRoutes },
   { path: '/reviews', router: reviewRoutes },
   { path: '/ugc', router: ugcRoutes },
+  { path: '/expenses', router: expenseRoutes },
+  { path: '/finance', router: financeRoutes },
+  { path: '/marketing', router: marketingRoutes },
+  { path: '/analytics', router: analyticsRoutes },
+  { path: '/notifications', router: notificationRoutes },
 ];
 
 routes.forEach(({ path, router: moduleRouter }) => router.use(path, moduleRouter));

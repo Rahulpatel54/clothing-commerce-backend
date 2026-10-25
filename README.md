@@ -1,14 +1,19 @@
 # Clothing Commerce & Business Management Backend
 
 Modular monolith on Node.js + Express + PostgreSQL + Sequelize.
-This build covers **phases 1–13** of the 25-phase plan: project setup, auth, RBAC,
+This build covers **phases 1–18** of the roadmap: project setup, auth, RBAC,
 users/customers, catalog + discovery, inventory, cart, promotions + checkout,
-orders, payments, loyalty wallet + referral program, wishlist, and reviews +
-user-generated content (UGC).
+orders, payments, loyalty wallet + referral program, wishlist, reviews +
+user-generated content (UGC), expenses + finance, marketing + analytics,
+notifications, background jobs engine, versioned envelope encryption with KMS,
+security hardening, test factories, and complete OpenAPI/Swagger documentation.
 
 **New to this codebase? Read [`DEVELOPER_GUIDE.md`](./DEVELOPER_GUIDE.md) first** —
 it explains the folder structure, the request lifecycle, what every dependency
 is for, and gives a step-by-step recipe for adding a new module.
+
+**Architecture & long-term principles? Read [`ARCHITECTURE_BLUEPRINT.md`](./ARCHITECTURE_BLUEPRINT.md)** —
+the system design analysis, enterprise target architecture, zero-breakage migration strategy, and the 10-point Architectural Constitution governing Phases 14–25.
 
 Every route is now documented at `/docs` (Swagger UI). Each endpoint's
 `@openapi` block lives inside its controller function — see §4 of the
@@ -29,6 +34,13 @@ developer guide for why, and for the pattern to copy when you add a route.
 | **Wishlist** (`wishlist_items`) — nested under `/customers/:id/wishlist`, idempotent add, owner-or-staff scoped | Done |
 | **Reviews** (`reviews`, `review_images`) — delivered & non-returned purchase verification, one review per customer per variant, rating (1–5), fit and quality feedback, helpful voting, admin moderation | Done |
 | **UGC** (`ugc_submissions`, `ugc_rewards`) — customer submissions, order verification, admin verification, automatic reward issuance through loyalty wallet ledger (`UGC_CREDIT`) | Done |
+| **Expenses** (`expense_categories`, `expenses`) — 9 core operational expense categories, period locking, receipt URL attachments, recurring rules, creator/approver tracking | Done |
+| **Finance** (`financial_periods`) — Profit & Loss (P&L) generation over arbitrary date ranges, COGS computed directly from snapshotted `order_items.cost_price`, period closing and auditability | Done |
+| **Marketing** (`campaigns`, `campaign_events`) — UTM tracking, campaign ROI attribution, event channels (Instagram/FB/WhatsApp/YouTube/Organic) | Done |
+| **Analytics** — Indexed aggregated commerce intelligence across Sales, Customers, Products, Marketing, and Operations | Done |
+| **Notifications** (`notifications`) — Multi-channel event bus (EMAIL, SMS, WHATSAPP, PUSH), transactional & marketing opt-in enforcement | Done |
+| **Background Jobs** (`src/jobs/`) — Dual engine (BullMQ + Redis with in-process fallback), coupon/reward expiration, abandoned cart, low-stock alerts, review reminders, idempotency key pruning | Done |
+| **Security & Envelope Encryption** (`encryption_keys`) — Versioned DEK envelope encryption (`v{ver}:{iv}:{tag}:{data}`), pluggable `LocalKmsProvider` (GCP/Vault ready), zero-downtime transactional re-encryption worker, magic byte file validator, IDOR isolation | Done |
 | **Docker** — an `api` service alongside `postgres` and `redis` in `docker-compose.yml`, with its own `Dockerfile` (multi-stage, non-root, runs migrations then boots) | Done |
 
 Everything from phases 1–6 (config, logging, error handling, auth, RBAC, users,

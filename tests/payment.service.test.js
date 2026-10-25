@@ -83,6 +83,18 @@ describe('webhook handling', () => {
     expect(orderRepo.update).not.toHaveBeenCalled();
   });
 
+  it('self-heals an orphaned payment on webhook redelivery if order is still PENDING', async () => {
+    provider.verifyWebhookSignature.mockReturnValue(true);
+    provider.parseWebhookEvent.mockReturnValue({ eventId: 'evt-1', providerPaymentId: 'mock_pay_1', status: 'captured', amount: 1000 });
+    repo.findByProviderPaymentId.mockResolvedValue(payment({ processedEvents: ['evt-1'], status: 'CAPTURED' }));
+    orderRepo.findById.mockResolvedValue(order({ status: 'PENDING' }));
+    orderService.transition.mockResolvedValue({});
+
+    const result = await service.handleWebhook('raw', 'sig', { eventId: 'evt-1' });
+    expect(result.deduped).toBe(true);
+    expect(orderService.transition).toHaveBeenCalledWith(expect.anything(), 'order-1', 'CONFIRMED', 'Payment captured');
+  });
+
   it('fails the payment when the webhook amount does not match the order', async () => {
     provider.verifyWebhookSignature.mockReturnValue(true);
     provider.parseWebhookEvent.mockReturnValue({ eventId: 'evt-2', providerPaymentId: 'mock_pay_1', status: 'captured', amount: 50 });

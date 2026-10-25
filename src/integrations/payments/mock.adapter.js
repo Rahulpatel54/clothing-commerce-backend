@@ -16,12 +16,15 @@ class MockPaymentProvider extends PaymentProvider {
   }
 
   sign(rawBody) {
-    return crypto.createHmac('sha256', config.payments.webhookSecret).update(rawBody).digest('hex');
+    if (!rawBody) return '';
+    const data = typeof rawBody === 'string' ? rawBody : (Buffer.isBuffer(rawBody) ? rawBody : JSON.stringify(rawBody));
+    return crypto.createHmac('sha256', config.payments.webhookSecret).update(data).digest('hex');
   }
 
   verifyWebhookSignature(rawBody, signature) {
-    if (!signature) return false;
+    if (!signature || !rawBody) return false;
     const expected = this.sign(rawBody);
+    if (!expected) return false;
     const a = Buffer.from(expected);
     const b = Buffer.from(String(signature));
     return a.length === b.length && crypto.timingSafeEqual(a, b);

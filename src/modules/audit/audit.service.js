@@ -14,16 +14,18 @@ function scrub(state) {
   return plain;
 }
 
-async function record(req, { action, entityType, entityId, before, after, transaction } = {}) {
+async function record(req, { action, entityType, entity, entityId, before, after, details, transaction } = {}) {
   try {
+    const resolvedEntityType = entityType || entity || 'Unknown';
+    const resolvedAfter = after !== undefined ? after : details;
     return await db.AuditLog.create(
       {
         actorUserId: req.user ? req.user.id : null,
         action,
-        entityType,
+        entityType: resolvedEntityType,
         entityId: entityId != null ? String(entityId) : null,
         beforeState: scrub(before),
-        afterState: scrub(after),
+        afterState: scrub(resolvedAfter),
         ipAddress: req.ip,
         userAgent: (req.headers && req.headers['user-agent']) || null,
         requestId: req.id,

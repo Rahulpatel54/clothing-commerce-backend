@@ -4,12 +4,17 @@ const app = require('./app');
 const config = require('./config');
 const logger = require('./config/logger');
 const { sequelize, connect } = require('./config/sequelize');
+const jobRunner = require('./jobs/job.runner');
 
 let server;
 
 async function start() {
   await connect();
   logger.info('Database connection established');
+
+  if (!config.isTest) {
+    jobRunner.start();
+  }
 
   server = app.listen(config.port, () => {
     logger.info(`API listening on port ${config.port} (${config.env})`);
@@ -19,6 +24,7 @@ async function start() {
 
 async function shutdown(signal) {
   logger.info(`${signal} received, shutting down`);
+  jobRunner.stop();
   if (server) await new Promise((resolve) => server.close(resolve));
   await sequelize.close();
   process.exit(0);

@@ -13,8 +13,8 @@ const router = express.Router();
 // auth.controller.js — this file only wires path + middleware + handler.
 router.post('/register', authLimiter, validate(schema.register), controller.register);
 router.post('/login', authLimiter, validate(schema.login), controller.login);
-router.post('/refresh', validate(schema.refresh), controller.refresh);
-router.post('/logout', validate(schema.logout), controller.logout);
+router.post('/refresh', authLimiter, validate(schema.refresh), controller.refresh);
+router.post('/logout', authLimiter, validate(schema.logout), controller.logout);
 router.post('/password/reset-request', authLimiter, validate(schema.requestPasswordReset), controller.requestPasswordReset);
 router.post('/password/reset', authLimiter, validate(schema.confirmPasswordReset), controller.confirmPasswordReset);
 router.get('/me', authenticate, controller.me);

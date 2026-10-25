@@ -48,6 +48,8 @@ const schema = Joi.object({
   CART_MAX_QTY_PER_VARIANT: Joi.number().default(5),
   REFERRAL_RETURN_WINDOW_DAYS: Joi.number().default(30),
   WALLET_CREDIT_EXPIRY_DAYS: Joi.number().default(365),
+  SECURITY_MASTER_KEK: Joi.string().default('0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'),
+  KMS_PROVIDER: Joi.string().valid('local', 'google', 'vault').default('local'),
 }).unknown();
 
 const { value: env, error } = schema.validate(process.env, { abortEarly: false });
@@ -85,6 +87,8 @@ module.exports = {
   security: {
     corsOrigins: env.CORS_ORIGINS === '*' ? '*' : env.CORS_ORIGINS.split(',').map((o) => o.trim()),
     rateLimit: { windowMs: env.RATE_LIMIT_WINDOW_MS, max: env.RATE_LIMIT_MAX },
+    masterKek: env.SECURITY_MASTER_KEK,
+    kmsProvider: env.KMS_PROVIDER,
   },
   logLevel: env.LOG_LEVEL,
   seed: { adminEmail: env.SEED_ADMIN_EMAIL, adminPassword: env.SEED_ADMIN_PASSWORD },

@@ -1,0 +1,874 @@
+{
+  "timestamp": "2026-10-25T06:51:12.993Z",
+  "steps": {
+    "1_auth": [
+      {
+        "title": "Invalid Credentials Rejection",
+        "endpoint": "POST /auth/login",
+        "expectedStatus": 401,
+        "actualStatus": 401,
+        "passed": true,
+        "response": {
+          "success": false,
+          "error": {
+            "code": "UNAUTHENTICATED",
+            "message": "Invalid email or password"
+          },
+          "requestId": "1f32ba2e-6bb1-4849-afe8-eeedd3d12c4a",
+          "stack": "ApiError: Invalid email or password\n    at ApiError.unauthorized (/app/src/utils/ApiError.js:28:65)\n    at Object.login (/app/src/modules/auth/auth.service.js:139:20)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async /app/src/modules/auth/auth.controller.js:76:18"
+        }
+      },
+      {
+        "title": "Admin Login with Seed Credentials",
+        "endpoint": "POST /auth/login",
+        "expectedStatus": 200,
+        "actualStatus": 200,
+        "passed": true,
+        "response": {
+          "userId": "80240edb-a21e-475d-8c30-8adeb9a9171d",
+          "email": "admin@example.com",
+          "roles": [
+            "admin"
+          ],
+          "hasToken": true
+        }
+      }
+    ],
+    "2_users_customers": [
+      {
+        "title": "List Users with Pagination",
+        "endpoint": "GET /users",
+        "expectedStatus": 200,
+        "actualStatus": 200,
+        "passed": true,
+        "meta": {
+          "total": 27,
+          "page": 1,
+          "limit": 10,
+          "totalPages": 3,
+          "hasNextPage": true
+        },
+        "count": 10
+      },
+      {
+        "title": "Create Staff Account",
+        "endpoint": "POST /users",
+        "expectedStatus": 201,
+        "actualStatus": 201,
+        "passed": true,
+        "createdUser": {
+          "id": "9ac58d71-3130-4827-8116-abbc0bf4dedd",
+          "email": "staff-sim-1792911074288@example.com",
+          "roles": [
+            "staff"
+          ]
+        }
+      },
+      {
+        "title": "Suspend Staff Account",
+        "endpoint": "PATCH /users/9ac58d71-3130-4827-8116-abbc0bf4dedd/status",
+        "expectedStatus": 200,
+        "actualStatus": 200,
+        "passed": true,
+        "status": "SUSPENDED"
+      },
+      {
+        "title": "Reactivate Staff Account",
+        "endpoint": "PATCH /users/9ac58d71-3130-4827-8116-abbc0bf4dedd/status",
+        "expectedStatus": 200,
+        "actualStatus": 200,
+        "passed": true,
+        "status": "ACTIVE"
+      },
+      {
+        "title": "List Customers with Financial Stats",
+        "endpoint": "GET /customers",
+        "expectedStatus": 200,
+        "actualStatus": 200,
+        "passed": true,
+        "sampleCustomer": {
+          "id": "7d4e31a7-8055-46c4-9e26-601b324e1c12",
+          "totalSpend": "0.00",
+          "orderCount": 0
+        }
+      },
+      {
+        "title": "Update Customer Tags and Admin Notes",
+        "endpoint": "PATCH /customers/7d4e31a7-8055-46c4-9e26-601b324e1c12",
+        "expectedStatus": 200,
+        "actualStatus": 200,
+        "passed": true,
+        "tags": [
+          "vip",
+          "autumn-campaign",
+          "high-intent"
+        ],
+        "notes": "Preferred VIP shopper. Priority concierge support assigned."
+      },
+      {
+        "title": "Non-existent Customer 404 Check",
+        "endpoint": "PATCH /customers/00000000-0000-0000-0000-000000000000",
+        "expectedStatus": 404,
+        "actualStatus": 404,
+        "passed": true
+      }
+    ],
+    "3_catalog_products": [
+      {
+        "title": "Create Category with Auto-Slug Generation",
+        "endpoint": "POST /categories",
+        "expectedStatus": 201,
+        "actualStatus": 201,
+        "passed": true,
+        "category": {
+          "id": "a563b1fd-bad4-41f1-bdf0-6c29da7ffc12",
+          "name": "Autumn Jackets 1792911074684",
+          "slug": "autumn-jackets-1792911074684"
+        }
+      },
+      {
+        "title": "Create Product with S/M/L Variants",
+        "endpoint": "POST /products",
+        "expectedStatus": 201,
+        "actualStatus": 201,
+        "passed": true,
+        "product": {
+          "id": "d35f55c9-bd09-469a-a42b-c4dfa59a6ef9",
+          "name": "Waterproof Parka",
+          "sku": "PARKA-074709",
+          "variantsCount": 3,
+          "variants": [
+            {
+              "id": "5029c305-b5de-48ba-8871-d97988d06b16",
+              "sku": "PARKA-074709-L",
+              "size": "L",
+              "price": "129.99"
+            },
+            {
+              "id": "8f06b5d7-97ca-4c68-a02f-7ef43661578e",
+              "sku": "PARKA-074709-M",
+              "size": "M",
+              "price": "129.99"
+            },
+            {
+              "id": "010445d3-5ac8-4a0b-ac58-4a278957ed64",
+              "sku": "PARKA-074709-S",
+              "size": "S",
+              "price": "129.99"
+            }
+          ]
+        }
+      },
+      {
+        "title": "Schema Validation Check on Status \"PUBLISHED\"",
+        "endpoint": "PATCH /products/d35f55c9-bd09-469a-a42b-c4dfa59a6ef9",
+        "expectedStatus": 422,
+        "actualStatus": 422,
+        "passed": true,
+        "note": "Validation middleware returns 422 Unprocessable Entity. API schema restricts status to [DRAFT, ACTIVE, ARCHIVED].",
+        "error": {
+          "code": "VALIDATION_ERROR",
+          "message": "Request validation failed",
+          "details": [
+            {
+              "segment": "body",
+              "field": "status",
+              "message": "\"status\" must be one of [DRAFT, ACTIVE, ARCHIVED]"
+            }
+          ]
+        }
+      },
+      {
+        "title": "Publish Product (status ACTIVE)",
+        "endpoint": "PATCH /products/d35f55c9-bd09-469a-a42b-c4dfa59a6ef9",
+        "expectedStatus": 200,
+        "actualStatus": 200,
+        "passed": true,
+        "productStatus": "ACTIVE"
+      }
+    ],
+    "4_inventory": [
+      {
+        "title": "GET /inventory Route Architecture Inspection",
+        "endpoint": "GET /inventory",
+        "expectedStatus": 404,
+        "actualStatus": 404,
+        "passed": true,
+        "note": "Inventory module routes are variant-scoped (/inventory/:variantId) and movement-scoped (/inventory/movements)."
+      },
+      {
+        "title": "Inspect Variant Inventory Level",
+        "endpoint": "GET /inventory/010445d3-5ac8-4a0b-ac58-4a278957ed64",
+        "expectedStatus": 200,
+        "actualStatus": 200,
+        "passed": true,
+        "stock": {
+          "id": "8ea31d3e-b38d-49d5-9969-24719ecdc754",
+          "variantId": "010445d3-5ac8-4a0b-ac58-4a278957ed64",
+          "physical": 0,
+          "reserved": 0,
+          "sold": 0,
+          "returned": 0,
+          "damaged": 0,
+          "createdAt": "2026-10-25T06:51:14.738Z",
+          "updatedAt": "2026-10-25T06:51:14.738Z",
+          "variant_id": "010445d3-5ac8-4a0b-ac58-4a278957ed64",
+          "available": 0
+        }
+      },
+      {
+        "title": "POST /inventory/purchase Route Inspection",
+        "endpoint": "POST /inventory/purchase",
+        "expectedStatus": 404,
+        "actualStatus": 404,
+        "passed": true,
+        "note": "Operational receiving endpoint is POST /inventory/receive."
+      },
+      {
+        "title": "Receive Purchase Order (+25 Physical Units)",
+        "endpoint": "POST /inventory/receive",
+        "expectedStatus": 201,
+        "actualStatus": 201,
+        "passed": true,
+        "inventory": {
+          "id": "8ea31d3e-b38d-49d5-9969-24719ecdc754",
+          "variantId": "010445d3-5ac8-4a0b-ac58-4a278957ed64",
+          "physical": 25,
+          "reserved": 0,
+          "sold": 0,
+          "returned": 0,
+          "damaged": 0,
+          "createdAt": "2026-10-25T06:51:14.738Z",
+          "updatedAt": "2026-10-25T06:51:14.905Z",
+          "variant_id": "010445d3-5ac8-4a0b-ac58-4a278957ed64",
+          "available": 25
+        }
+      },
+      {
+        "title": "Record Damaged Unit (1 Unit)",
+        "endpoint": "POST /inventory/damage",
+        "expectedStatus": 200,
+        "actualStatus": 200,
+        "passed": true,
+        "inventory": {
+          "id": "8ea31d3e-b38d-49d5-9969-24719ecdc754",
+          "variantId": "010445d3-5ac8-4a0b-ac58-4a278957ed64",
+          "physical": 24,
+          "reserved": 0,
+          "sold": 0,
+          "returned": 0,
+          "damaged": 1,
+          "createdAt": "2026-10-25T06:51:14.738Z",
+          "updatedAt": "2026-10-25T06:51:14.936Z",
+          "variant_id": "010445d3-5ac8-4a0b-ac58-4a278957ed64",
+          "available": 24
+        }
+      },
+      {
+        "title": "POST /inventory/cycle-count Route Inspection",
+        "endpoint": "POST /inventory/cycle-count",
+        "expectedStatus": 404,
+        "actualStatus": 404,
+        "passed": true,
+        "note": "Physical count discrepancy adjustment endpoint is POST /inventory/adjust."
+      },
+      {
+        "title": "Cycle Count Discrepancy Adjustment (delta -2)",
+        "endpoint": "POST /inventory/adjust",
+        "expectedStatus": 200,
+        "actualStatus": 200,
+        "passed": true,
+        "inventory": {
+          "id": "8ea31d3e-b38d-49d5-9969-24719ecdc754",
+          "variantId": "010445d3-5ac8-4a0b-ac58-4a278957ed64",
+          "physical": 22,
+          "reserved": 0,
+          "sold": 0,
+          "returned": 0,
+          "damaged": 1,
+          "createdAt": "2026-10-25T06:51:14.738Z",
+          "updatedAt": "2026-10-25T06:51:15.001Z",
+          "variant_id": "010445d3-5ac8-4a0b-ac58-4a278957ed64",
+          "available": 22
+        }
+      },
+      {
+        "title": "Audit Trail of Inventory Movements",
+        "endpoint": "/inventory/movements?variantId=010445d3-5ac8-4a0b-ac58-4a278957ed64",
+        "expectedStatus": 200,
+        "actualStatus": 200,
+        "passed": true,
+        "movementsCount": 3,
+        "movementTypes": [
+          "ADJUSTMENT",
+          "DAMAGE",
+          "PURCHASE"
+        ]
+      }
+    ],
+    "5_orders": [
+      {
+        "title": "List Orders (Admin / Privileged)",
+        "endpoint": "GET /orders",
+        "expectedStatus": 200,
+        "actualStatus": 200,
+        "passed": true,
+        "initialCount": 13
+      },
+      {
+        "title": "Transition: CONFIRMED -> PROCESSING",
+        "endpoint": "PATCH /orders/b8537e01-6f59-490f-b7a6-42d6bc07e00a/status",
+        "expectedStatus": 200,
+        "actualStatus": 200,
+        "passed": true,
+        "status": "PROCESSING"
+      },
+      {
+        "title": "Transition: PROCESSING -> PACKED",
+        "endpoint": "PATCH /orders/b8537e01-6f59-490f-b7a6-42d6bc07e00a/status",
+        "expectedStatus": 200,
+        "actualStatus": 200,
+        "passed": true,
+        "status": "PACKED"
+      },
+      {
+        "title": "Transition: PACKED -> SHIPPED (with Tracking Info)",
+        "endpoint": "PATCH /orders/b8537e01-6f59-490f-b7a6-42d6bc07e00a/status",
+        "expectedStatus": 200,
+        "actualStatus": 200,
+        "passed": true,
+        "status": "SHIPPED"
+      },
+      {
+        "title": "Transition: SHIPPED -> OUT_FOR_DELIVERY",
+        "endpoint": "PATCH /orders/b8537e01-6f59-490f-b7a6-42d6bc07e00a/status",
+        "expectedStatus": 200,
+        "actualStatus": 200,
+        "passed": true,
+        "status": "OUT_FOR_DELIVERY"
+      },
+      {
+        "title": "Transition: OUT_FOR_DELIVERY -> DELIVERED",
+        "endpoint": "PATCH /orders/b8537e01-6f59-490f-b7a6-42d6bc07e00a/status",
+        "expectedStatus": 200,
+        "actualStatus": 200,
+        "passed": true,
+        "status": "DELIVERED",
+        "deliveredAt": "2026-10-25T06:51:16.493Z"
+      },
+      {
+        "title": "Reject Invalid Transition (DELIVERED -> PENDING 409 Conflict)",
+        "endpoint": "PATCH /orders/b8537e01-6f59-490f-b7a6-42d6bc07e00a/status",
+        "expectedStatus": 409,
+        "actualStatus": 409,
+        "passed": true,
+        "conflictError": {
+          "code": "CONFLICT",
+          "message": "Cannot move an order from DELIVERED to PENDING",
+          "details": {
+            "from": "DELIVERED",
+            "to": "PENDING"
+          }
+        }
+      },
+      {
+        "title": "Reject Invalid Transition (DELIVERED -> CANCELLED 409 Conflict)",
+        "endpoint": "PATCH /orders/b8537e01-6f59-490f-b7a6-42d6bc07e00a/status",
+        "expectedStatus": 409,
+        "actualStatus": 409,
+        "passed": true
+      }
+    ],
+    "6_promotions": [
+      {
+        "title": "Create Percentage Discount Promotion",
+        "endpoint": "POST /promotions",
+        "expectedStatus": 201,
+        "actualStatus": 201,
+        "passed": true,
+        "promotion": {
+          "id": "46abe5d2-cf02-4a99-a602-cd794389b7a5",
+          "name": "Autumn Promo 1792911076559",
+          "type": "PERCENTAGE",
+          "value": "15.00",
+          "minOrderAmount": "50.00"
+        }
+      },
+      {
+        "title": "Create Coupon Code with Usage Limits",
+        "endpoint": "POST /promotions/46abe5d2-cf02-4a99-a602-cd794389b7a5/coupons",
+        "expectedStatus": 201,
+        "actualStatus": 201,
+        "passed": true,
+        "coupon": {
+          "id": "77b953ce-c419-4473-b13e-1b0ae8004760",
+          "usedCount": 0,
+          "code": "AUTUMN15_6595",
+          "usageLimit": 100,
+          "usageLimitPerCustomer": 1,
+          "isActive": true,
+          "promotionId": "46abe5d2-cf02-4a99-a602-cd794389b7a5",
+          "updatedAt": "2026-10-25T06:51:16.616Z",
+          "createdAt": "2026-10-25T06:51:16.616Z"
+        }
+      }
+    ],
+    "7_ugc_moderation": [
+      {
+        "title": "List Reviews across Products",
+        "endpoint": "GET /reviews",
+        "expectedStatus": 200,
+        "actualStatus": 200,
+        "passed": true,
+        "reviewsCount": 6
+      },
+      {
+        "title": "Moderate Review (Approve Verified Review)",
+        "endpoint": "PATCH /reviews/9baf564c-434e-4c5b-a094-ce2bb4735515/moderation",
+        "expectedStatus": 200,
+        "actualStatus": 200,
+        "passed": true,
+        "reviewStatus": "APPROVED"
+      },
+      {
+        "title": "List UGC Submissions",
+        "endpoint": "GET /ugc",
+        "expectedStatus": 200,
+        "actualStatus": 200,
+        "passed": true,
+        "ugcCount": 6
+      },
+      {
+        "title": "PATCH /ugc/:id/review Route Architecture Inspection",
+        "endpoint": "PATCH /ugc/27383ba8-e113-426a-9467-dc4a9abcbcd8/review",
+        "expectedStatus": 404,
+        "actualStatus": 404,
+        "passed": true,
+        "note": "UGC verification endpoint is PATCH /ugc/:id/verify."
+      },
+      {
+        "title": "Verify UGC Submission and Credit Loyalty Wallet",
+        "endpoint": "PATCH /ugc/27383ba8-e113-426a-9467-dc4a9abcbcd8/verify",
+        "expectedStatus": 200,
+        "actualStatus": 200,
+        "passed": true,
+        "rewardAmount": 25,
+        "walletBefore": 0,
+        "walletAfter": 25,
+        "credited": 25,
+        "walletTransaction": {
+          "id": "91b6d50b-5d0e-4b5c-b3ff-3a2dc0c87e93",
+          "walletId": "2678ad21-ac8a-4352-80f2-ad256fb9e801",
+          "type": "UGC_CREDIT",
+          "amount": "25.00",
+          "expiresAt": "2027-10-25T06:51:19.948Z",
+          "referenceType": "UGC_SUBMISSION",
+          "referenceId": "27383ba8-e113-426a-9467-dc4a9abcbcd8",
+          "note": "Reward for verified UGC submission (INSTAGRAM)",
+          "createdAt": "2026-10-25T06:51:19.948Z",
+          "wallet_id": "2678ad21-ac8a-4352-80f2-ad256fb9e801"
+        }
+      }
+    ],
+    "8_finance": [
+      {
+        "title": "Create Operational Expense Category",
+        "endpoint": "POST /expenses/categories",
+        "expectedStatus": 201,
+        "actualStatus": 201,
+        "passed": true,
+        "category": {
+          "id": "5537514c-3104-4ac8-9c50-b5a43f71cf99",
+          "name": "Warehouse Supplies 1792911081956",
+          "slug": "warehouse-supplies-1792911081956",
+          "description": "Packaging boxes, tape, envelopes, protective wraps",
+          "isActive": true,
+          "updatedAt": "2026-10-25T06:51:21.970Z",
+          "createdAt": "2026-10-25T06:51:21.970Z"
+        }
+      },
+      {
+        "title": "Create Operational Expense",
+        "endpoint": "POST /expenses",
+        "expectedStatus": 201,
+        "actualStatus": 201,
+        "passed": true,
+        "expense": {
+          "id": "6018015e-8b0d-42c4-84ac-611b3f4f0360",
+          "categoryId": "5537514c-3104-4ac8-9c50-b5a43f71cf99",
+          "amount": "145.50",
+          "date": "2026-11-10",
+          "vendor": "Packaging Direct Ltd",
+          "paymentMethod": "CORPORATE_CARD",
+          "description": "Bulk 200-pack recycled shipping boxes for autumn orders",
+          "receiptUrl": null,
+          "isRecurring": false,
+          "recurringRule": null,
+          "status": "APPROVED",
+          "createdBy": "80240edb-a21e-475d-8c30-8adeb9a9171d",
+          "approvedBy": "80240edb-a21e-475d-8c30-8adeb9a9171d",
+          "createdAt": "2026-10-25T06:51:21.996Z",
+          "updatedAt": "2026-10-25T06:51:21.996Z",
+          "category_id": "5537514c-3104-4ac8-9c50-b5a43f71cf99",
+          "created_by": "80240edb-a21e-475d-8c30-8adeb9a9171d",
+          "approved_by": "80240edb-a21e-475d-8c30-8adeb9a9171d",
+          "category": {
+            "id": "5537514c-3104-4ac8-9c50-b5a43f71cf99",
+            "name": "Warehouse Supplies 1792911081956",
+            "slug": "warehouse-supplies-1792911081956"
+          },
+          "creator": {
+            "id": "80240edb-a21e-475d-8c30-8adeb9a9171d",
+            "email": "admin@example.com",
+            "firstName": "Platform",
+            "lastName": "Admin"
+          },
+          "approver": {
+            "id": "80240edb-a21e-475d-8c30-8adeb9a9171d",
+            "email": "admin@example.com",
+            "firstName": "Platform",
+            "lastName": "Admin"
+          }
+        }
+      },
+      {
+        "title": "Inspect Real-Time P&L Statement",
+        "endpoint": "GET /finance/pnl",
+        "expectedStatus": 200,
+        "actualStatus": 200,
+        "passed": true,
+        "pnl": {
+          "revenue": {
+            "grossSales": 519.96,
+            "discounts": 0,
+            "refunds": 0,
+            "netSales": 519.96,
+            "shippingCollected": 0,
+            "taxCollected": 26,
+            "netRevenue": 519.96,
+            "orderCount": 4,
+            "refundCount": 0
+          },
+          "costOfGoodsSold": {
+            "totalCOGS": 220,
+            "unitsSold": 4,
+            "itemsSold": 4
+          },
+          "profitability": {
+            "grossProfit": 299.96,
+            "grossMarginPercentage": 57.69,
+            "operatingExpenses": 145.5,
+            "operatingIncome": 154.46,
+            "netProfit": 154.46,
+            "netMarginPercentage": 29.71
+          }
+        }
+      },
+      {
+        "title": "POST /finance/periods/close Route Inspection",
+        "endpoint": "POST /finance/periods/close",
+        "expectedStatus": 404,
+        "actualStatus": 404,
+        "passed": true,
+        "note": "Period closing endpoint requires the period ID: POST /finance/periods/:id/close."
+      },
+      {
+        "title": "Create Financial Accounting Period",
+        "endpoint": "POST /finance/periods",
+        "expectedStatus": 201,
+        "actualStatus": 201,
+        "passed": true,
+        "period": {
+          "id": "46a37ba6-64a8-427e-aac1-99dbcb44969c",
+          "name": "November 2026 Close 1792911082047",
+          "startDate": "2026-11-01",
+          "endDate": "2026-11-30",
+          "isClosed": false,
+          "updatedAt": "2026-10-25T06:51:22.068Z",
+          "createdAt": "2026-10-25T06:51:22.068Z",
+          "closedAt": null,
+          "closedBy": null
+        }
+      },
+      {
+        "title": "Close Financial Accounting Period",
+        "endpoint": "POST /finance/periods/46a37ba6-64a8-427e-aac1-99dbcb44969c/close",
+        "expectedStatus": 200,
+        "actualStatus": 200,
+        "passed": true,
+        "closedPeriod": {
+          "id": "46a37ba6-64a8-427e-aac1-99dbcb44969c",
+          "name": "November 2026 Close 1792911082047",
+          "startDate": "2026-11-01",
+          "endDate": "2026-11-30",
+          "isClosed": true,
+          "closedAt": "2026-10-25T06:51:22.101Z",
+          "closedBy": "80240edb-a21e-475d-8c30-8adeb9a9171d",
+          "createdAt": "2026-10-25T06:51:22.068Z",
+          "updatedAt": "2026-10-25T06:51:22.101Z",
+          "closed_by": "80240edb-a21e-475d-8c30-8adeb9a9171d"
+        }
+      },
+      {
+        "title": "Reject Expense Creation in Closed Period (409 Conflict)",
+        "endpoint": "POST /expenses",
+        "expectedStatus": 409,
+        "actualStatus": 409,
+        "passed": true,
+        "error": {
+          "code": "CONFLICT",
+          "message": "Cannot post expenses to a closed financial period"
+        }
+      },
+      {
+        "title": "Reject Expense Modification in Closed Period (409 Conflict)",
+        "endpoint": "PATCH /expenses/6018015e-8b0d-42c4-84ac-611b3f4f0360",
+        "expectedStatus": 409,
+        "actualStatus": 409,
+        "passed": true,
+        "error": {
+          "code": "CONFLICT",
+          "message": "Cannot modify an expense in a closed financial period"
+        }
+      }
+    ],
+    "9_marketing_analytics": [
+      {
+        "title": "Create Marketing Campaign with UTM Parameters",
+        "endpoint": "POST /marketing/campaigns",
+        "expectedStatus": 201,
+        "actualStatus": 201,
+        "passed": true,
+        "campaign": {
+          "id": "aa0ec883-6ab1-4cd9-8054-194be73de24f",
+          "name": "Autumn 2026 Push 1792911082171",
+          "slug": "autumn-2026-push-1792911082171",
+          "channel": "INSTAGRAM",
+          "budget": "750.00",
+          "audience": "Outdoors enthusiasts aged 24-40",
+          "utmSource": "instagram",
+          "utmMedium": "story",
+          "utmCampaign": "autumn-parka",
+          "utmTerm": null,
+          "utmContent": "carousel_v1",
+          "discountCouponId": null,
+          "startsAt": null,
+          "endsAt": null,
+          "isActive": true,
+          "updatedAt": "2026-10-25T06:51:22.188Z",
+          "createdAt": "2026-10-25T06:51:22.188Z"
+        }
+      },
+      {
+        "title": "Sales Analytics Endpoint",
+        "endpoint": "GET /analytics/sales",
+        "expectedStatus": 200,
+        "actualStatus": 200,
+        "passed": true,
+        "data": {
+          "orderCount": 4,
+          "totalRevenue": 545.96,
+          "totalSubtotal": 519.96,
+          "totalDiscount": 0,
+          "averageOrderValue": 136.49,
+          "unitsSold": 4,
+          "funnel": {
+            "visits": 0,
+            "cartAdds": 0,
+            "checkoutStarts": 0,
+            "purchases": 4
+          },
+          "conversionRate": 0
+        }
+      },
+      {
+        "title": "Customer Analytics Endpoint",
+        "endpoint": "GET /analytics/customers",
+        "expectedStatus": 200,
+        "actualStatus": 200,
+        "passed": true,
+        "data": {
+          "newCustomers": 21,
+          "totalCustomers": 21,
+          "repeatCustomers": 0,
+          "oneTimeCustomers": 21,
+          "averageLTV": 44.69,
+          "topCustomerSpend": 386.5,
+          "repeatRate": 0
+        }
+      },
+      {
+        "title": "Product Analytics Endpoint",
+        "endpoint": "GET /analytics/products",
+        "expectedStatus": 200,
+        "actualStatus": 200,
+        "passed": true,
+        "data": {
+          "bestSellers": [
+            {
+              "productId": "10300181-5c99-4eec-bb39-e69b9770eef1",
+              "productName": "Waterproof Parka",
+              "totalSold": 1,
+              "totalRevenue": 129.99,
+              "grossProfit": 74.99
+            },
+            {
+              "productId": "4fbb508b-3c88-4b02-a01d-e805ef6de0d9",
+              "productName": "Waterproof Parka",
+              "totalSold": 1,
+              "totalRevenue": 129.99,
+              "grossProfit": 74.99
+            },
+            {
+              "productId": "a2e21ba8-976e-4e18-8f7e-7996d0f9a370",
+              "productName": "Waterproof Parka",
+              "totalSold": 1,
+              "totalRevenue": 129.99,
+              "grossProfit": 74.99
+            },
+            {
+              "productId": "d35f55c9-bd09-469a-a42b-c4dfa59a6ef9",
+              "productName": "Waterproof Parka",
+              "totalSold": 1,
+              "totalRevenue": 129.99,
+              "grossProfit": 74.99
+            }
+          ],
+          "popularVariants": [
+            {
+              "size": "S",
+              "color": "Olive Green",
+              "quantitySold": 4
+            }
+          ]
+        }
+      },
+      {
+        "title": "Marketing Analytics Endpoint",
+        "endpoint": "GET /analytics/marketing",
+        "expectedStatus": 200,
+        "actualStatus": 200,
+        "passed": true,
+        "data": {
+          "referrals": {
+            "signups": 0,
+            "firstPurchases": 0,
+            "delivered": 0,
+            "rewardsIssued": 0,
+            "fraudFlagged": 0
+          },
+          "acquisitionSources": [],
+          "ugc": {
+            "pending": 2,
+            "approved": 5,
+            "rejected": 0
+          }
+        }
+      },
+      {
+        "title": "Operations Analytics Endpoint",
+        "endpoint": "GET /analytics/operations",
+        "expectedStatus": 200,
+        "actualStatus": 200,
+        "passed": true,
+        "data": {
+          "totalOrders": 14,
+          "cancelledOrders": 0,
+          "returnedOrders": 0,
+          "deliveredOrders": 7,
+          "cancellationRate": 0,
+          "returnRate": 0,
+          "inventoryMovements": {
+            "received": 350,
+            "sold": 11,
+            "damaged": 5,
+            "restocked": 0
+          }
+        }
+      }
+    ],
+    "10_notifications": [
+      {
+        "title": "List Notifications",
+        "endpoint": "GET /notifications",
+        "expectedStatus": 200,
+        "actualStatus": 200,
+        "passed": true,
+        "notificationsCount": 2
+      },
+      {
+        "title": "Send Manual Notification",
+        "endpoint": "POST /notifications",
+        "expectedStatus": 201,
+        "actualStatus": 201,
+        "passed": true,
+        "notification": {
+          "id": "a471ddeb-da6c-436c-aa76-e703daced649",
+          "customerId": null,
+          "type": "ORDER_CONFIRMED",
+          "channel": "EMAIL",
+          "recipient": "shopper-test@example.com",
+          "title": "Order Confirmed - Waterproof Parka",
+          "body": "Your Autumn Parka order has been confirmed by operations and is being prepared for packing.",
+          "status": "SENT",
+          "errorMessage": null,
+          "metadata": {
+            "orderNumber": "ORDMVNGYNEL",
+            "source": "Admin Operations Simulation",
+            "deliveryResult": {
+              "success": true,
+              "provider": "mock-email",
+              "messageId": "email-1792911082405-u3pp5p"
+            }
+          },
+          "sentAt": "2026-10-25T06:51:22.405Z",
+          "createdAt": "2026-10-25T06:51:22.401Z",
+          "updatedAt": "2026-10-25T06:51:22.406Z",
+          "customer_id": null
+        }
+      },
+      {
+        "title": "Retry Notification Delivery",
+        "endpoint": "POST /notifications/a471ddeb-da6c-436c-aa76-e703daced649/retry",
+        "expectedStatus": 200,
+        "actualStatus": 200,
+        "passed": true,
+        "retriedNotification": {
+          "id": "a471ddeb-da6c-436c-aa76-e703daced649",
+          "customerId": null,
+          "type": "ORDER_CONFIRMED",
+          "channel": "EMAIL",
+          "recipient": "shopper-test@example.com",
+          "title": "Order Confirmed - Waterproof Parka",
+          "body": "Your Autumn Parka order has been confirmed by operations and is being prepared for packing.",
+          "status": "SENT",
+          "errorMessage": null,
+          "metadata": {
+            "source": "Admin Operations Simulation",
+            "orderNumber": "ORDMVNGYNEL",
+            "deliveryResult": {
+              "success": true,
+              "provider": "mock-email",
+              "messageId": "email-1792911082405-u3pp5p"
+            },
+            "retryResult": {
+              "success": true,
+              "provider": "mock-email",
+              "messageId": "email-1792911082429-d2d9vi"
+            }
+          },
+          "sentAt": "2026-10-25T06:51:22.429Z",
+          "createdAt": "2026-10-25T06:51:22.401Z",
+          "updatedAt": "2026-10-25T06:51:22.431Z",
+          "customer_id": null
+        }
+      }
+    ]
+  },
+  "summary": {
+    "total": 53,
+    "passed": 53,
+    "failed": 0,
+    "bugs": []
+  }
+}

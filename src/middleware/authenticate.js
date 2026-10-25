@@ -55,7 +55,10 @@ const authenticate = async (req, res, next) => {
 
 const optionalAuthenticate = async (req, res, next) => {
   if (!extract(req)) return next();
-  return authenticate(req, res, (err) => (err ? next() : next()));
+  return authenticate(req, res, (err) => {
+    if (err) req.authError = err;
+    return next();
+  });
 };
 
 module.exports = authenticate;

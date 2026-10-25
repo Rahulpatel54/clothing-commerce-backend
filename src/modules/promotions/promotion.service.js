@@ -106,8 +106,21 @@ const evaluate = async ({ lines, subtotal, customerId, couponCode }, transaction
 };
 
 const redeemCoupon = async (couponId, customerId, orderId, discountAmount, transaction) => {
-  const coupon = await require('../../models').Coupon.findByPk(couponId, { transaction });
+  const db = require('../../models');
+  const coupon = await db.Coupon.findByPk(couponId, {
+    transaction,
+    lock: transaction ? transaction.LOCK.UPDATE : undefined,
+  });
   if (!coupon) return null;
+  if (coupon.usageLimit != null && coupon.usedCount >= coupon.usageLimit) {
+    throw ApiError.conflict('This coupon has already reached its maximum usage limit');
+  }
+  if (customerId && coupon.usageLimitPerCustomer != null) {
+    const customerRedemptions = await repo.countCustomerRedemptions(coupon.id, customerId, transaction);
+    if (customerRedemptions >= coupon.usageLimitPerCustomer) {
+      throw ApiError.conflict('You have already used this coupon');
+    }
+  }
   await repo.createRedemption({ couponId, customerId, orderId, discountAmount }, transaction);
   await repo.incrementCouponUsage(coupon, transaction);
   return coupon;

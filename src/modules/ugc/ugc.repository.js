@@ -2,7 +2,7 @@
 
 const db = require('../../models');
 
-const customerInclude = { model: db.Customer, as: 'customer', attributes: ['id', 'firstName', 'lastName'] };
+const customerInclude = { model: db.Customer, as: 'customer', attributes: ['id', 'userId'], include: [{ model: db.User, as: 'user', attributes: ['id', 'firstName', 'lastName', 'email'] }] };
 const orderInclude = { model: db.Order, as: 'order', attributes: ['id', 'orderNumber', 'status', 'deliveredAt'] };
 const rewardInclude = { model: db.UgcReward, as: 'reward' };
 

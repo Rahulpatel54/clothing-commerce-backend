@@ -12,7 +12,7 @@ const createHistory = (payload, transaction) => db.OrderStatusHistory.create(pay
 
 const findById = (id, transaction) => db.Order.findByPk(id, { include: [itemInclude, historyInclude, customerInclude], transaction });
 // Row lock: two concurrent transition requests for the same order must serialize.
-const findByIdForUpdate = (id, transaction) => db.Order.findByPk(id, { include: [itemInclude], transaction, lock: transaction.LOCK.UPDATE });
+const findByIdForUpdate = (id, transaction) => db.Order.findByPk(id, { transaction, lock: transaction.LOCK.UPDATE });
 
 const findByOrderNumber = (orderNumber) => db.Order.findOne({ where: { orderNumber } });
 

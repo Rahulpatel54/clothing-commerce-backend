@@ -20,7 +20,8 @@ async function loadWalletBalance(customerId, transaction) {
     const walletService = require('../loyalty/wallet.service');
     return await walletService.getBalance(customerId, transaction);
   } catch (err) {
-    return 0;
+    if (err.code === 'MODULE_NOT_FOUND') return 0;
+    throw err;
   }
 }
 
@@ -28,8 +29,11 @@ async function debitWallet(customerId, amount, orderId, transaction) {
   try {
     // eslint-disable-next-line global-require
     const walletService = require('../loyalty/wallet.service');
-    await walletService.debit({ customerId, amount, reason: 'ORDER_PAYMENT', referenceType: 'ORDER', referenceId: orderId }, transaction);
-  } catch (err) { /* loyalty module optional in isolated tests */ }
+    await walletService.debit({ customerId, amount, reason: 'ORDER_PAYMENT_DEBIT', referenceType: 'ORDER', referenceId: orderId }, transaction);
+  } catch (err) {
+    if (err.code === 'MODULE_NOT_FOUND') return;
+    throw err;
+  }
 }
 
 /**
@@ -88,9 +92,10 @@ const checkout = async (req, { addressId, couponCode, useWalletBalance, idempote
 
       const totalAmount = Math.max(0, round2(subtotal + shippingAmount + taxInfo.addOn - promo.discount - walletAmount));
 
-      // Reserve stock per line before the order exists, so a race against another
-      // checkout for the same variant is resolved by inventory's own row lock.
-      for (const line of lines) {
+      // Reserve stock per line in deterministic canonical order (by variantId)
+      // to eliminate database deadlock risks across concurrent multi-item checkouts.
+      const sortedLines = [...lines].sort((a, b) => a.variantId.localeCompare(b.variantId));
+      for (const line of sortedLines) {
         // eslint-disable-next-line no-await-in-loop
         await inventoryService.reserve({ variantId: line.variantId, quantity: line.quantity, referenceType: 'CHECKOUT', referenceId: cart.id, actorUserId: userId }, t);
       }

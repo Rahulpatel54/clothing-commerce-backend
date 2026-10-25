@@ -53,12 +53,17 @@ const spec = swaggerJsdoc({
       { name: 'Referrals', description: 'Referral program' },
       { name: 'Reviews', description: 'Product reviews, ratings and moderation' },
       { name: 'UGC', description: 'User-generated content submissions and rewards' },
+      { name: 'Expenses', description: 'Operational expense tracking and categories' },
+      { name: 'Finance', description: 'Financial statements, P&L reports and period closing' },
+      { name: 'Marketing', description: 'Campaign tracking, UTM attribution and conversion events' },
+      { name: 'Analytics', description: 'Indexed aggregated commerce metrics (Sales, Customers, Products, Marketing, Operations)' },
+      { name: 'Notifications', description: 'Multi-channel notifications and customer delivery status' },
     ],
   },
   // Every @openapi block lives inside its controller function, right after the
   // opening line of the handler — not in the route file. This is the single
   // source of truth /docs is generated from; see DEVELOPER_GUIDE.md.
-  apis: [path.join(__dirname, '..', 'modules', '**', '*.controller.js')],
+  apis: [path.join(__dirname, '..', 'modules', '**', '*.controller.js').replace(/\\/g, '/')],
 });
 
 function mountSwagger(app) {

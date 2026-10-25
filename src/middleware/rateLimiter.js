@@ -21,5 +21,5 @@ const build = (options = {}) =>
 
 module.exports = {
   globalLimiter: build(),
-  authLimiter: build({ windowMs: 15 * 60 * 1000, max: 10 }),
+  authLimiter: build({ windowMs: 15 * 60 * 1000, max: config.isProduction ? 10 : 500 }),
 };

@@ -8,6 +8,9 @@ const ruleInclude = { model: db.PromotionRule, as: 'rules' };
 const findCouponByCode = (code, transaction) =>
   db.Coupon.findOne({ where: { code: String(code).trim().toUpperCase() }, include: [{ model: db.Promotion, as: 'promotion', include: [ruleInclude] }], transaction });
 
+const findCouponById = (id, transaction) =>
+  db.Coupon.findByPk(id, { include: [{ model: db.Promotion, as: 'promotion', include: [ruleInclude] }], transaction });
+
 // Automatic promotions only: no coupon required, active, within any configured time window,
 // and either global or scoped to this exact customer.
 const findAutomaticPromotions = (customerId, transaction) =>
@@ -43,4 +46,4 @@ const customerOrderCount = async (customerId, transaction) => {
   }
 };
 
-module.exports = { findCouponByCode, findAutomaticPromotions, countCustomerRedemptions, createRedemption, incrementCouponUsage, customerOrderCount };
+module.exports = { findCouponByCode, findCouponById, findAutomaticPromotions, countCustomerRedemptions, createRedemption, incrementCouponUsage, customerOrderCount };

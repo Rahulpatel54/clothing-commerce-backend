@@ -39,7 +39,10 @@ async function getOrCreateCart({ customerId, sessionId }, transaction) {
 }
 
 function effectivePrice(variant) {
-  return Number(variant.price != null ? variant.price : variant.product.price);
+  if (!variant) return 0;
+  if (variant.price != null) return Number(variant.price);
+  if (variant.product && variant.product.price != null) return Number(variant.product.price);
+  return 0;
 }
 
 async function present(cart, transaction) {
@@ -64,7 +67,7 @@ async function present(cart, transaction) {
       priceAtAdd: Number(item.priceAtAdd),
       currentPrice,
       priceChanged,
-      available: productActive && variant.isActive,
+      available: Boolean(productActive && variant && variant.isActive),
       product: variant && variant.product ? { id: variant.product.id, name: variant.product.name, slug: variant.product.slug } : null,
       variant: variant ? { id: variant.id, size: variant.size, color: variant.color, sku: variant.sku } : null,
       lineTotal,

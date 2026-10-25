@@ -4,7 +4,8 @@ Read this once before touching the code. It explains what's where, why the
 codebase is shaped the way it is, what every package is doing, and gives you a
 copy-paste recipe for adding a new feature the same way everything else here
 was built. Companion docs: `README.md` (what's built, how to run it),
-`PROMPT_CHAIN.md` (phase-by-phase history and what's still to build).
+`PROMPT_CHAIN.md` (phase-by-phase history and what's still to build), and
+`ARCHITECTURE_BLUEPRINT.md` (system design analysis and the 10-point Architectural Constitution).
 
 ---
 
